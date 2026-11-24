@@ -1,6 +1,8 @@
 """Dibuja el logo de MageGod: el de CurseForge (512x512 PNG) y el icono del minimapa (64x64 TGA).
 
-Una gema de maná tallada sobre un fondo arcano, con rayos y un aro de escarcha.
+Un bastón de mago con un orbe arcano en la punta, en diagonal como el arco de HunterGod y el pico
+de FarmGod, sobre un fondo arcano con rayos y un aro de escarcha. (Hasta el 2026-11-24 era una gema
+de maná, pero se leía como un diamante cualquiera.)
 Uso: python -I make_logo.py <logo.png> <icono.tga>
 Necesita: pip install pillow
 """
@@ -69,35 +71,73 @@ def glow_behind(img):
     img.alpha_composite(layer.filter(ImageFilter.GaussianBlur(90)))
 
 
-def gem(img):
+STAFF_SILVER_DARK = (120, 150, 180, 255)
+WOOD = (122, 74, 40, 255)
+WOOD_LIGHT = (164, 108, 62, 255)
+CLOTH = (63, 199, 235, 255)  # el azul de mago, #3FC7EB
+
+
+def thick_line(d, a, b, width, colour, edge=34):
+    d.line([a, b], fill=OUTLINE, width=width + edge)
+    for p in (a, b):
+        r = (width + edge) / 2
+        d.ellipse((p[0] - r, p[1] - r, p[0] + r, p[1] + r), fill=OUTLINE)
+    d.line([a, b], fill=colour, width=width)
+    for p in (a, b):
+        r = width / 2
+        d.ellipse((p[0] - r, p[1] - r, p[0] + r, p[1] + r), fill=colour)
+
+
+def along(t, a, b):
+    return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+
+
+FOOT, TOP = (C - 470, C + 470), (C + 150, C - 150)
+L = math.dist(FOOT, TOP)
+U = ((TOP[0] - FOOT[0]) / L, (TOP[1] - FOOT[1]) / L)  # a lo largo de la vara
+V = (-U[1], U[0])  # de través
+ORB = (TOP[0] + U[0] * 200, TOP[1] + U[1] * 200)
+ORB_R = 185
+
+
+def band(d, centre, length, width, colour, edge=22):
+    def rect(l, w):
+        hl, hw = l / 2, w / 2
+        return [(centre[0] + U[0] * a + V[0] * b, centre[1] + U[1] * a + V[1] * b)
+                for a, b in ((-hl, -hw), (hl, -hw), (hl, hw), (-hl, hw))]
+    d.polygon(rect(length + edge, width + edge), fill=OUTLINE)
+    d.polygon(rect(length, width), fill=colour)
+
+
+def staff(img):
     d = ImageDraw.Draw(img)
-    oy = 40  # un poco por debajo del centro, que la punta pesa
-    girdle, top, tip = -130 + oy, -400 + oy, 540 + oy
-    wide, crown, table = 500, 290, 150
+    thick_line(d, FOOT, TOP, 112, WOOD)
+    d.line([along(0.03, FOOT, TOP), along(0.97, FOOT, TOP)], fill=WOOD_LIGHT, width=26)
+    # Dos vendas finas de tela azul en la empuñadura
+    for t in (0.36, 0.47):
+        band(d, along(t, FOOT, TOP), 44, 150, CLOTH)
+    # La abrazadera de plata bajo el orbe: un collar y una copa que se abre hacia él
+    band(d, along(0.97, FOOT, TOP), 60, 170, STAFF_SILVER_DARK)
+    cup_base = (TOP[0] + U[0] * 20, TOP[1] + U[1] * 20)
+    cup_top = (ORB[0] - U[0] * (ORB_R - 40), ORB[1] - U[1] * (ORB_R - 40))
+    cup = [(cup_base[0] + V[0] * 80, cup_base[1] + V[1] * 80), (cup_top[0] + V[0] * 170, cup_top[1] + V[1] * 170),
+           (cup_top[0] - V[0] * 170, cup_top[1] - V[1] * 170), (cup_base[0] - V[0] * 80, cup_base[1] - V[1] * 80)]
+    d.polygon(cup, fill=SILVER, outline=OUTLINE, width=24)
 
-    def p(x, y):
-        return (C + x, C + y)
 
-    facets = [
-        # Corona: la mesa arriba, más clara, y dos faldones
-        ([p(-wide, girdle), p(-crown, top), p(-table, girdle)], CYAN),
-        ([p(-crown, top), p(crown, top), p(table, girdle), p(-table, girdle)], ICE),
-        ([p(crown, top), p(wide, girdle), p(table, girdle)], BLUE),
-        # Pabellón: hacia la punta, más oscuro
-        ([p(-wide, girdle), p(-table, girdle), p(0, tip)], BLUE),
-        ([p(-table, girdle), p(table, girdle), p(0, tip)], CYAN),
-        ([p(table, girdle), p(wide, girdle), p(0, tip)], DEEP),
-    ]
-    outline = [p(-wide, girdle), p(-crown, top), p(crown, top), p(wide, girdle), p(0, tip)]
-    d.polygon(outline, fill=NIGHT, outline=OUTLINE, width=44)
-    for points, colour in facets:
-        d.polygon(points, fill=colour)
-    for points, _ in facets:
-        d.line(points + [points[0]], fill=NIGHT, width=12, joint="curve")
-    d.line(outline + [outline[0]], fill=OUTLINE, width=36, joint="curve")
-    # Un brillo en la mesa
-    d.polygon([p(-crown + 60, top + 40), p(-crown + 200, top + 40), p(-table - 10, girdle - 40), p(-table - 110, girdle - 40)],
-              fill=(255, 255, 255, 170))
+def orb_glow(img):
+    layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    d.ellipse((ORB[0] - 360, ORB[1] - 360, ORB[0] + 360, ORB[1] + 360), fill=(160, 120, 255, 160))
+    img.alpha_composite(layer.filter(ImageFilter.GaussianBlur(75)))
+    d = ImageDraw.Draw(img)
+    r = ORB_R
+    d.ellipse((ORB[0] - r - 22, ORB[1] - r - 22, ORB[0] + r + 22, ORB[1] + r + 22), fill=OUTLINE)
+    for k, col in ((1.0, (96, 64, 210, 255)), (0.86, (134, 100, 245, 255)), (0.64, (150, 205, 255, 255)),
+                   (0.36, (238, 250, 255, 255))):
+        rr = r * k
+        d.ellipse((ORB[0] - rr, ORB[1] - rr, ORB[0] + rr, ORB[1] + rr), fill=col)
+    d.ellipse((ORB[0] - r * 0.7, ORB[1] - r * 0.7, ORB[0] - r * 0.3, ORB[1] - r * 0.3), fill=(255, 255, 255, 230))
 
 
 def sparkle(img, x, y, size):
@@ -113,10 +153,11 @@ img = background()
 rays(img)
 halo(img)
 glow_behind(img)
-gem(img)
-sparkle(img, C + 330, C - 330, 120)
-sparkle(img, C - 380, C + 260, 80)
-sparkle(img, C + 250, C + 360, 55)
+staff(img)
+orb_glow(img)
+sparkle(img, C - 330, C - 300, 110)
+sparkle(img, C + 390, C + 240, 80)
+sparkle(img, C - 150, C + 420, 50)
 img.resize((512, 512), Image.LANCZOS).save(sys.argv[1])
 
 # Icono del minimapa: el centro del logo en un círculo, para el botón redondo
