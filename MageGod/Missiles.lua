@@ -19,7 +19,7 @@ local BREATH = 1.2 -- each half of the calm glow's breath
 local TEST_SECONDS = 5
 local BUFF_SECONDS = 15 -- how long Missile Barrage lasts: the sample counts it down
 local TIMER_Y = -146 -- the seconds left, just under the lightning
-local DEFAULT_POINT = { "CENTER", "CENTER", 0, 30 }
+local DEFAULT_POINT = { "CENTER", "CENTER", 0, -20 } -- a little under the middle, around your character
 ns.BARRAGE_SPELL = NAME_SPELL
 
 local DEFAULT = {}

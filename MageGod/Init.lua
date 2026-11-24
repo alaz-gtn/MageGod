@@ -39,7 +39,7 @@ local defaults = {
 	-- Purple lightning on both sides of you while Missile Barrage is up
 	missiles = {
 		enabled = true,
-		size = 100, -- %
+		size = 60, -- %: around your character, not over half the screen
 		gap = 150, -- from the middle to each side
 		alpha = 85, -- the strike as it comes, %
 		calm = 30, -- the lightning while it lasts, after the strike: faint, %
@@ -298,11 +298,22 @@ SlashCmdList.MAGEGOD = function(msg)
 	end
 end
 
+-- Settings saved by an older version, brought up to date
+function ns.MigrateSettings(saved, fresh)
+	-- 1.0.0 saved its lightning at 100% for everyone: smaller now, unless you had made it another size
+	if not fresh and (saved.version or 1) < 2 and saved.missiles.size == 100 then
+		saved.missiles.size = defaults.missiles.size
+	end
+	saved.version = 2
+end
+
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", function(self, event, name)
 	if name ~= addonName then return end
+	local fresh = MageGodDB == nil
 	MageGodDB = Fill(MageGodDB or {}, defaults)
 	ns.db = MageGodDB
+	ns.MigrateSettings(MageGodDB, fresh)
 	self:UnregisterEvent("ADDON_LOADED")
 end)

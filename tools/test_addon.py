@@ -1078,8 +1078,12 @@ check(set(gaps) == {150} and {e[2] for e in dressed.placed.values()} == {-1, 1},
 colors = [tuple(round(c, 2) for c in e[1].color.values()) for e in dressed.tinted.values()]
 check(colors[1] == (0.62, 0.32, 1.0) and colors[2][2] == 1.0 and colors[2][0] > 0.8, f"purple, the cores nearly white: {colors[:3]}")
 holder, place = state.holder, state.place
-check(place.point[1] == "CENTER" and G.Same(place.point[2], G.UIParent) and place.point[5] == 30
-      and G.Same(holder.point[2], place) and holder.scale == 1, "in the middle of the screen, above you")
+check(place.point[1] == "CENTER" and G.Same(place.point[2], G.UIParent) and place.point[5] == -20
+      and G.Same(holder.point[2], place) and holder.scale == 0.6, "around you: a bit under the middle, at 60%")
+for saved, fresh, want in ((dict(size=100), False, 60), (dict(size=80), False, 80), (dict(size=100, v=2), False, 100)):
+    old = lua.table(missiles=lua.table(size=saved["size"]), version=saved.get("v"))
+    ns.MigrateSettings(old, fresh)
+    check(old.missiles.size == want and old.version == 2, f"settings from 1.0.0, size {saved}: {old.missiles.size}")
 check(not state.spot.shown, "the sample is hidden")
 
 auras(Missile_Barrage=(10, 15, 999001))
