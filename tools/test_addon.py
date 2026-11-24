@@ -41,7 +41,7 @@ SPELLS = {
   [19705] = "Well Fed",
   [116] = "Frostbolt", [133] = "Fireball", [5143] = "Arcane Missiles",
   [11426] = "Ice Barrier", [13033] = "Ice Barrier", [1463] = "Mana Shield",
-  [1953] = "Blink",
+  [1953] = "Blink", [1296017] = "Comprehend Scroll",
   [400588] = "Missile Barrage", [400589] = "Missile Barrage", [401736] = "Missile Barrage", [467409] = "Missile Barrage",
 }
 -- How far each spell reaches
@@ -98,8 +98,12 @@ FOOD_TIPS = {
 }
 C_Container = {
   GetContainerNumSlots = function(bag) return G.bags[bag] and #G.bags[bag] or 0 end,
-  GetContainerItemInfo = function(bag, slot) local it = G.bags[bag] and G.bags[bag][slot] if it then return { itemID = it[1], stackCount = it[2] } end end,
+  GetContainerItemInfo = function(bag, slot) local it = G.bags[bag] and G.bags[bag][slot] if it then return { itemID = it[1], stackCount = it[2], itemName = it[3] } end end,
 }
+-- Your skills: { name, rank }
+SKILLS = {}
+GetNumSkillLines = function() return #SKILLS end
+GetSkillLineInfo = function(i) local s = SKILLS[i] return s[1], false, false, s[2] end
 C_TooltipInfo = { GetBagItem = function(bag, slot)
   local it = G.bags[bag] and G.bags[bag][slot]
   if not it then return end
@@ -937,13 +941,47 @@ for item in (277485, 277488, 275069, 277493):
 G.Fire("BAG_UPDATE_DELAYED")
 check(extras() == [], "no scrolls in the bags: nothing")
 
+# Scrolls not yet deciphered: a click casts Comprehend Scroll on one
+saved_bags = S.bags
+S.bags = lua.table_from({0: lua.table_from([lua.table(211787, 1), lua.table(281015, 1)]),
+                         1: lua.table_from([lua.table(700, 3), lua.table(999123, 1, "Scroll: NEW WORDS"),
+                                            lua.table(999124, 1, "Scroll of Wit")])})
+G.Fire("BAG_UPDATE_DELAYED")
+check(extras() == [], "Comprehend Scroll not learned yet: nothing")
+know(1296017)
+decipher = "/cast Comprehend Scroll\n/use 0 1"
+check(extras() == [(f"{L.DECIPHER} (3)", "macro", decipher)],
+      f"three to decipher (one by its name alone, not the deciphered Scroll of Wit), the easiest first: {extras()}")
+drow = list(G.ShownIcons(food).values())[0]
+check(drow.icon.tex == 2117870 and drow.item == 211787 and drow.clickText == L.CLICK_DECIPHER,
+      "with the scroll's icon, and its tooltip says what a click does")
+G.SKILLS = lua.table(lua.table(L.COMPREHENSION, 12))
+ns.UpdateBuffs()
+check(extras() == [(f"{L.DECIPHER} (2)", "macro", decipher)], f"Comprehension 12: the one that wants 175 left out: {extras()}")
+S.bags = lua.table_from({0: lua.table_from([lua.table(700, 3), lua.table(281015, 1)])})
+G.Fire("BAG_UPDATE_DELAYED")
+check(extras() == [], "only one you can't read yet: nothing")
+G.SKILLS = lua.table()
+G.Fire("BAG_UPDATE_DELAYED")
+check(extras() == [(L.DECIPHER, "macro", "/cast Comprehend Scroll\n/use 0 2")], f"skill unknown: tried anyway, where it is: {extras()}")
+S["items"][277651] = 1
+G.Fire("BAG_UPDATE_DELAYED")
+check(extras()[1] == (L.OPEN_BUNDLE, "item", "item:277651"), f"a Bundle of Scrolls: a click opens it: {extras()}")
+db.scrolls.decipher = False
+ns.UpdateBuffs()
+check(extras() == [], "can be turned off")
+db.scrolls.decipher = True
+S["items"][277651] = 0
+S.bags = saved_bags
+G.Fire("BAG_UPDATE_DELAYED")
+
 # ---------------------------------------------------------------- Moving the displays
 ns.SetUnlocked(True)
 check(len(icons()) == 2 and food.shown and rng.shown and thr.shown and bar.shown and mana.shown,
       "unlocked: samples of everything to drag")
 check(mana.text.text == "3.2" and bar_color() == (0.45, 0.5, 0.62), "the mana bar's sample is a wait")
 check(not cast.shown, "the cast buttons stay out of the way")
-check([r[0] for r in extras()] == ["Arcane Intellect  1:35", L.FOOD_MISSING, L.IMBUE_MISSING, L.FAMILIAR_MISSING],
+check([r[0] for r in extras()] == ["Arcane Intellect  1:35", L.FOOD_MISSING, L.IMBUE_MISSING, L.FAMILIAR_MISSING, L.DECIPHER],
       f"the running out, food and scroll samples: {extras()}")
 check(all(f.mover.shown for f in ns.movers.values()), "each with its handle")
 ns.SetUnlocked(False)

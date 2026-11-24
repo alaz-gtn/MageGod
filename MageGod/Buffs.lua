@@ -394,6 +394,60 @@ local function FamiliarOut()
 	return false
 end
 
+-- Scrolls you haven't deciphered yet ("Scroll: KWYJIBO"...): Comprehend Scroll turns each into
+-- one of the scrolls above or another. The Season of Discovery ones keep their numbers in
+-- Forever, the last four are Forever's own. Each wants some Comprehension: 1, 15, 50 or 175
+local ENCIPHERED = {
+	[211780] = 1, [211785] = 1, [211786] = 1, [211787] = 1,
+	[211784] = 15, [211853] = 15, [211854] = 15, [211855] = 15,
+	[213543] = 50, [213544] = 50, [213545] = 50, [213546] = 50, [213547] = 50,
+	[281015] = 175, [281016] = 175, [281017] = 175, [281018] = 175,
+}
+ns.ENCIPHERED = ENCIPHERED
+local COMPREHEND = 1296017
+local BUNDLE = 277651 -- what Study gives once an hour: a few deciphered scrolls inside
+
+-- Your Comprehension, or nil when the skill list doesn't say
+local function Comprehension()
+	if not (GetNumSkillLines and GetSkillLineInfo) then return end
+	for i = 1, GetNumSkillLines() or 0 do
+		local name, header, _, rank = GetSkillLineInfo(i)
+		if not header and name == L.COMPREHENSION and type(rank) == "number" and not ns.IsSecret(rank) then
+			return rank
+		end
+	end
+end
+
+-- An undeciphered scroll is in the list, or (another number Forever may give it) has that kind of
+-- name: "Scroll: " and words in capitals
+local function Enciphered(itemID, name)
+	if ENCIPHERED[itemID] then return ENCIPHERED[itemID] end
+	if type(name) == "string" and not ns.IsSecret(name) and name:match("^Scroll: [%u%p ]+$") then return 1 end
+end
+
+-- How many undeciphered scrolls you carry, and where the one to decipher first is: the easiest
+-- your Comprehension can read
+local function FindEnciphered()
+	if not (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerItemInfo) then return 0 end
+	local skill = Comprehension()
+	local count, best = 0, nil
+	for bag = 0, NUM_BAG_SLOTS or 4 do
+		for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
+			local info = C_Container.GetContainerItemInfo(bag, slot)
+			local id = type(info) == "table" and info.itemID
+			if id and not ns.IsSecret(id) then
+				local name = info.itemName or (C_Item and C_Item.GetItemNameByID and C_Item.GetItemNameByID(id))
+				local needs = Enciphered(id, name)
+				if needs and (not skill or needs <= skill) then
+					count = count + (info.stackCount or 1)
+					if not best or needs < best.needs then best = { bag = bag, slot = slot, item = id, needs = needs } end
+				end
+			end
+		end
+	end
+	return count, best
+end
+
 local function FoodMissing()
 	if not ns.db.food.enabled or not ns.IsMage() or inCombat or Dead() then return false end
 	local maxLevel = GetMaxPlayerLevel and GetMaxPlayerLevel() or 60
@@ -426,6 +480,7 @@ local function Extras(expiring)
 		if ns.db.food.enabled then list[#list + 1] = { icon = ns.SpellIcon(WELL_FED), text = L.FOOD_MISSING, grey = true, food = true } end
 		if o.imbue then list[#list + 1] = { icon = ItemIcon(277485), text = L.IMBUE_MISSING } end
 		if o.familiar then list[#list + 1] = { icon = ItemIcon(FAMILIARS[1]), text = L.FAMILIAR_MISSING } end
+		if o.decipher then list[#list + 1] = { icon = ItemIcon(211780), text = L.DECIPHER } end
 		return list
 	end
 	if FoodMissing() then list[#list + 1] = { icon = ns.SpellIcon(WELL_FED), text = L.FOOD_MISSING, grey = true, food = true } end
@@ -445,6 +500,19 @@ local function Extras(expiring)
 			list[#list + 1] = { icon = ItemIcon(item), text = L.FAMILIAR_MISSING, item = item, use = "item:" .. item }
 		end
 	end
+	if o.decipher then
+		-- Cast Comprehend Scroll on the scroll, as a Disenchant macro does on an item
+		local count, scroll = FindEnciphered()
+		if scroll and ns.Knows({ COMPREHEND }) then
+			local spell = ns.SpellName(COMPREHEND) or "Comprehend Scroll"
+			list[#list + 1] = { icon = ItemIcon(scroll.item), item = scroll.item, click = L.CLICK_DECIPHER,
+				text = count > 1 and format("%s (%d)", L.DECIPHER, count) or L.DECIPHER,
+				macro = format("/cast %s\n/use %d %d", spell, scroll.bag, scroll.slot) }
+		end
+		if (ItemCount(BUNDLE) or 0) > 0 then
+			list[#list + 1] = { icon = ItemIcon(BUNDLE), text = L.OPEN_BUNDLE, item = BUNDLE, use = "item:" .. BUNDLE }
+		end
+	end
 	return list
 end
 
@@ -452,7 +520,7 @@ local function Extra_OnEnter(self)
 	if self.item then
 		GameTooltip:SetOwner(self, "ANCHOR_TOP")
 		if GameTooltip.SetItemByID then GameTooltip:SetItemByID(self.item) end
-		GameTooltip:AddLine(L.CLICK_USE, 0.4, 0.8, 1)
+		GameTooltip:AddLine(self.clickText or L.CLICK_USE, 0.4, 0.8, 1)
 		GameTooltip:Show()
 	elseif self.spellName then
 		GameTooltip:SetOwner(self, "ANCHOR_TOP")
@@ -691,6 +759,7 @@ function UpdateExtras(expiring)
 		b.text:SetTextColor(colour[1], colour[2], colour[3])
 		b.text:SetText(r.text)
 		b.item, b.spellName = r.item, not r.item and r.spell or nil
+		b.clickText = r.click
 		b.isFood = r.food
 		-- The open list follows its row, and goes with it
 		if r.food and menu:IsShown() then

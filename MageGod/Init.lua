@@ -17,7 +17,7 @@ local defaults = {
 	gems = { enabled = true, all = false },
 	food = { enabled = true },
 	-- Forever's mage scrolls that last an hour: a weapon imbue and a familiar
-	scrolls = { imbue = true, familiar = true },
+	scrolls = { imbue = true, familiar = true, decipher = true },
 	scrollUsed = {}, -- by kind: time() when you last used one
 	lastImbue = nil, -- the scroll you used last of each kind
 	lastFamiliar = nil,

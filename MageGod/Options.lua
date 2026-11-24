@@ -580,6 +580,8 @@ local function Build()
 	y = Section(page, y, L.SEC_SCROLLS)
 	y = Check(page, y, L.OPT_IMBUE, function() return scrolls.imbue end, function(v) scrolls.imbue = v Buffs() end,
 		ns.ItemIcon(277485))
+	y = Check(page, y, L.OPT_DECIPHER, function() return scrolls.decipher end, function(v) scrolls.decipher = v Buffs() end,
+		SpellIcon(1296017, "Interface\\Icons\\INV_Scroll_11"))
 	y = Check(page, y, L.OPT_FAMILIAR, function() return scrolls.familiar end, function(v) scrolls.familiar = v Buffs() end,
 		ns.ItemIcon(ns.FAMILIARS[1]))
 	local scrollsHint = Text(page, "GameFontHighlightSmall", MUTED)
