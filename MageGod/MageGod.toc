@@ -1,0 +1,21 @@
+## Interface: 16001
+## Title: MageGod
+## Notes: Quality of life for mages: reminders for your armor, Arcane Intellect, mana gem and food buff, purple lightning on Missile Barrage, a pulse when Blink is back, range to your target and an aggro warning. /magegod
+## Notes-esES: Mejoras para magos: avisos de armadura, Intelecto Arcano, gema de maná y bufo de comida, rayos morados con el proc de Proyectiles Arcanos, aviso cuando vuelve Traslación, distancia al objetivo y aviso de agro. /magegod
+## Notes-esMX: Mejoras para magos: avisos de armadura, Intelecto Arcano, gema de maná y bufo de comida, rayos morados con el proc de Proyectiles Arcanos, aviso cuando vuelve Traslación, distancia al objetivo y aviso de agro. /magegod
+## Author: wowforeverplus
+## Version: 1.0.0
+## Category: Class
+## SavedVariables: MageGodDB
+## IconTexture: Interface\AddOns\MageGod\media\icon
+## X-License: GPL-3.0-or-later
+
+Locales.lua
+Init.lua
+Buffs.lua
+Mana.lua
+Missiles.lua
+Pulse.lua
+Range.lua
+MinimapButton.lua
+Options.lua
