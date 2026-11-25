@@ -12,6 +12,7 @@
 - 💧 **Five-second rule bar (MP5)**: when your Spirit gives mana back, and each tick
 - 📏 **Range to your target**: melee, Frost Nova, in range of your main spell, at the edge of it or out of range, on the target's nameplate
 - ⚠️ **Aggro warning** in a group, before you pull it off the tank
+- 💰 **Talent reset price**: at your trainer, when the price of resetting your talents drops
 
 ### De un vistazo
 
@@ -23,6 +24,7 @@
 - 💧 **Barra de la regla de los 5 segundos (MP5)**: cuándo te devuelve maná el Espíritu, y cada tick
 - 📏 **Distancia al objetivo**: cuerpo a cuerpo, Nova de Escarcha, a tiro de tu hechizo principal, al límite o fuera de alcance, en la placa del objetivo
 - ⚠️ **Aviso de agro** en grupo, antes de quitárselo al tanque
+- 💰 **Precio de reiniciar talentos**: en tu instructor, cuándo baja el precio de reiniciar los talentos
 
 Everything is set up from the **minimap button** or `/magegod`. English and Spanish.
 Todo se configura desde el **botón del minimapa** o con `/magegod`. En inglés y en español.
@@ -43,6 +45,7 @@ Forever hides your buffs, your cooldowns and what your shield absorbs from addon
 - **MP5 bar**: grey and emptying for the five seconds after a spell that costs mana (not your wand), blue and filling up to each tick when your mana comes back, with what the last tick gave you. It hides with your mana full and, unless you say otherwise, out of combat.
 - **Range**: red in melee (5 yd), yellow in Frost Nova range (10 yd), green in range of your main spell and light blue in its last 5 yards. Your main spell is the last one you cast of Frostbolt, Fireball and Arcane Missiles, or the one you choose. In yards or metres.
 - **Aggro**: AGGRO 92% before you take it off the tank, and YOU HAVE AGGRO! when you do. Only in a group.
+- **At your trainer**: a note under its window says when you last reset your talents, what it costs now, and when the price drops and to what; it shows under the trainer's price too. The game doesn't tell addons when you last reset or when the price drops, so MageGod writes down each reset you pay for from now on and counts from there: a step up with each reset (1, 5, 10, then 5 g more up to 50 g) and a step down for each week since the last one, as players report it. The price the trainer asks always wins. Class and legacy talents, each with its own price.
 - Drag any display where you want it with **Move displays** (or `/magegod unlock`).
 
 ## Commands
@@ -53,6 +56,7 @@ Forever hides your buffs, your cooldowns and what your shield absorbs from addon
 - `/magegod blink` · `traslacion`: try the Blink pulse
 - `/magegod buffs` · `bufos`: what the addon sees of your buffs
 - `/magegod range` · `rango`: what each range check says about your target
+- `/magegod respec` · `talentos`: when the talent reset price drops
 
 ## License
 

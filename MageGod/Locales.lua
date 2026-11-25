@@ -77,6 +77,27 @@ local L = {
 	TAB_RANGE = "Range",
 	TAB_THREAT = "Aggro",
 	TAB_PROCS = "Procs",
+	-- Talent reset price, under the class trainer's window
+	SEC_RESPEC = "Class trainer",
+	OPT_RESPEC = "When the talent reset price drops, under your trainer's window",
+	RESPEC_HINT = "Blizzard doesn't publish it: players report a step up with each reset (1, 5, 10, then 5 g more up to 50 g) and a step down for each week since the last one. The price the trainer asks is the real one.",
+	RESPEC_TITLE = "Talent reset",
+	RESPEC_CLASS = "Class talents",
+	RESPEC_LEGACY = "Legacy talents",
+	RESPEC_LAST = "Last one %s ago, for %s",
+	RESPEC_NOW = "Now: %s",
+	RESPEC_NOW_ABOUT = "Now: about %s",
+	RESPEC_DROPS = "Drops to %s %s (in %s)",
+	RESPEC_LOWEST = "It's at its lowest",
+	RESPEC_ASKED = "The trainer asked %s, %s ago",
+	RESPEC_UNKNOWN = "%s doesn't know when you last reset yet: it writes it down the next time you pay for one.",
+	RESPEC_TODAY = "today at %s",
+	RESPEC_TOMORROW = "tomorrow at %s",
+	RESPEC_ON = "on %s at %s",
+	RESPEC_WEEKDAYS = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" },
+	RESPEC_MINUTES = "%d min",
+	RESPEC_HOURS = "%d h",
+	RESPEC_DAYS = "%d days",
 	OPT_MISSILES = "Purple lightning around you while %s is up",
 	OPT_MISSILES_SIZE = "Size (%)",
 	OPT_MISSILES_X = "Left or right",
@@ -181,6 +202,7 @@ local L = {
 		"  /magegod buffs  - what the addon sees of your buffs",
 		"  /magegod lightning  - try the Missile Barrage lightning",
 		"  /magegod blink  - try the pulse for Blink ready",
+		"  /magegod respec  - when the talent reset price drops",
 		"  /magegod button  - show or hide the minimap button",
 	},
 }
@@ -252,6 +274,26 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
 	L.TAB_RANGE = "Distancia"
 	L.TAB_THREAT = "Agro"
 	L.TAB_PROCS = "Procs"
+	L.SEC_RESPEC = "Instructor de clase"
+	L.OPT_RESPEC = "Cuándo baja el precio de reiniciar talentos, bajo la ventana del instructor"
+	L.RESPEC_HINT = "Blizzard no lo publica: los jugadores cuentan que sube un escalón con cada reinicio (1, 5, 10 y luego 5 g más hasta 50 g) y baja uno por cada semana desde el último. El precio que pide el instructor es el real."
+	L.RESPEC_TITLE = "Reinicio de talentos"
+	L.RESPEC_CLASS = "Talentos de clase"
+	L.RESPEC_LEGACY = "Talentos de legado"
+	L.RESPEC_LAST = "El último, hace %s, por %s"
+	L.RESPEC_NOW = "Ahora: %s"
+	L.RESPEC_NOW_ABOUT = "Ahora: unos %s"
+	L.RESPEC_DROPS = "Baja a %s %s (en %s)"
+	L.RESPEC_LOWEST = "Ya está en lo más bajo"
+	L.RESPEC_ASKED = "El instructor te pidió %s hace %s"
+	L.RESPEC_UNKNOWN = "%s aún no sabe cuándo reiniciaste por última vez: lo apunta la próxima vez que pagues uno."
+	L.RESPEC_TODAY = "hoy a las %s"
+	L.RESPEC_TOMORROW = "mañana a las %s"
+	L.RESPEC_ON = "el %s a las %s"
+	L.RESPEC_WEEKDAYS = { "domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado" }
+	L.RESPEC_MINUTES = "%d min"
+	L.RESPEC_HOURS = "%d h"
+	L.RESPEC_DAYS = "%d días"
 	L.OPT_MISSILES = "Rayos morados a tu alrededor mientras dure %s"
 	L.OPT_MISSILES_SIZE = "Tamaño (%)"
 	L.OPT_MISSILES_X = "Izquierda o derecha"
@@ -354,6 +396,7 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
 		"  /magegod bufos  - lo que el addon ve de tus bufos",
 		"  /magegod rayos  - probar los rayos del proc de Proyectiles Arcanos",
 		"  /magegod traslacion  - probar el aviso de Traslación lista",
+		"  /magegod talentos  - cuándo baja el precio de reiniciar talentos",
 		"  /magegod boton  - mostrar u ocultar el botón del minimapa",
 	}
 end

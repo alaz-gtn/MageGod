@@ -589,6 +589,14 @@ local function Build()
 	scrollsHint:SetWidth(PAGE_WIDTH - 20)
 	scrollsHint:SetText(L.SCROLLS_HINT)
 	y = y - 30
+	y = Section(page, y, L.SEC_RESPEC)
+	y = Check(page, y, L.OPT_RESPEC, function() return db.respec.enabled end, function(v) db.respec.enabled = v end,
+		"Interface\\Icons\\INV_Misc_Coin_01")
+	local respecHint = Text(page, "GameFontHighlightSmall", MUTED)
+	respecHint:SetPoint("TOPLEFT", 10, y - 6)
+	respecHint:SetWidth(PAGE_WIDTH - 20)
+	respecHint:SetText(L.RESPEC_HINT)
+	y = y - 56
 	local barrier = db.barrier
 	local function BarrierChanged()
 		ns.StyleBarrier()

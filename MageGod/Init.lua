@@ -18,6 +18,8 @@ local defaults = {
 	food = { enabled = true },
 	-- Forever's mage scrolls that last an hour: a weapon imbue and a familiar
 	scrolls = { imbue = true, familiar = true, decipher = true },
+	-- At the class trainer: when the talent reset price drops. The trainer options seen to lead to the reset
+	respec = { enabled = true, options = {} },
 	scrollUsed = {}, -- by kind: time() when you last used one
 	lastImbue = nil, -- the scroll you used last of each kind
 	lastFamiliar = nil,
