@@ -7,6 +7,7 @@ local L = {
 	YARDS = "yd",
 	METERS = "m",
 	NOT_IN_COMBAT = "not in combat: try again when the fight is over.",
+	OTHER_CLASS = "only for a mage: on this character it stays hidden.",
 	UNLOCKED = "displays unlocked: drag them where you want them. /magegod lock when you're done.",
 	LOCKED = "displays locked.",
 
@@ -257,6 +258,7 @@ local L = {
 if GetLocale() == "esES" or GetLocale() == "esMX" then
 	L.SUBTITLE = "Mejoras para magos"
 	L.NOT_IN_COMBAT = "no en combate: vuelve a probar cuando acabe la pelea."
+	L.OTHER_CLASS = "solo para un mago: en este personaje no se muestra."
 	L.UNLOCKED = "avisos desbloqueados: arrástralos donde quieras. /magegod bloquear cuando acabes."
 	L.LOCKED = "avisos bloqueados."
 

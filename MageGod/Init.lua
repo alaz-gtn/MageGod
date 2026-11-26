@@ -144,7 +144,10 @@ local function Fill(saved, default)
 	return saved
 end
 
+-- Every ...God addon loads on every character: with another class this one keeps quiet (a vendor
+-- would hear each of them say the same), unless you typed one of its commands
 function ns.Print(msg)
+	if not (ns.inCommand or ns.IsMage()) then return end
 	print(L.PREFIX .. msg)
 end
 
@@ -298,6 +301,10 @@ function ns.Movable(frame, key, defaultPoint, label)
 end
 
 function ns.SetUnlocked(on)
+	if on and not ns.IsMage() then
+		ns.Print(L.OTHER_CLASS)
+		return
+	end
 	if InCombatLockdown() then
 		ns.Print(L.NOT_IN_COMBAT)
 		return
@@ -340,7 +347,10 @@ SlashCmdList.MAGEGOD = function(msg)
 	end
 	local command = ns.commands[word]
 	if command then
-		command(word)
+		ns.inCommand = true
+		local ok, err = pcall(command, word)
+		ns.inCommand = false
+		if not ok then error(err, 0) end
 	else
 		Help()
 	end

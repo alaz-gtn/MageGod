@@ -1,3 +1,7 @@
+# 1.2.2
+
+- **With every ...God addon on**: on a character of another class this one stays out of the way. It says nothing in the chat (a vendor no longer hears the same line from each addon) and won't enter move mode; it tells you why if you try.
+
 # 1.2.1
 
 - **Group buffs**: warriors and rogues no longer count as missing your Arcane Intellect; they have no mana, so it does nothing for them.

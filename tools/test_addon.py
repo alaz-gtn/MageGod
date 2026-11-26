@@ -2039,6 +2039,49 @@ check(not rnote.shown, "another class: not this addon's trainer")
 S["class"] = "MAGE"
 
 print()
+# ---------------------------------------------------------------- Another class: nothing on screen
+# Every ...God addon loads for every class: with another one, this one must draw nothing on top of
+# the others (the minimap button and the options aside)
+lua.execute('''
+function VisibleFrames()
+  local out = {}
+  for name, f in pairs(NAMED) do
+    local p, seen = f, true
+    while p do
+      if not rawget(p, "shown") then seen = false break end
+      p = rawget(p, "parent")
+    end
+    -- A frame that only holds others draws nothing of its own: it counts only through them
+    local holder = false
+    for _, c in ipairs(FRAMES) do if rawequal(rawget(c, "parent"), f) then holder = true break end end
+    if seen and not holder and not name:find("Spot$") and not name:find("Minimap") and not name:find("Options")
+      and not name:find("Settings") then out[#out + 1] = name end
+  end
+  table.sort(out)
+  return out
+end
+''')
+S["class"] = "PRIEST"
+S.freeSlots = 1  # bags nearly full: every ...God would warn its own class
+S.combat = False
+for ev in ("SPELLS_CHANGED", "BAG_UPDATE_DELAYED", "GROUP_ROSTER_UPDATE", "UPDATE_INVENTORY_DURABILITY", "PLAYER_REGEN_ENABLED"):
+    G.Fire(ev)
+G.Fire("UNIT_AURA", "player")
+G.RunTimers() if G.RunTimers else None
+for f in (ns.refreshers or lua.table()).values():
+    f()
+shown = list(G.VisibleFrames().values())
+check(not shown, f"another class: nothing on screen: {shown}")
+S.repairs = True  # a vendor who repairs, with your gear worn: its own class would hear of it
+S.durability = 40
+printed.clear()
+G.Fire("MERCHANT_SHOW")
+G.Fire("CONFIRM_TALENT_WIPE")
+check(not printed, f"another class: nothing said at a vendor or a trainer: {list(printed)}")
+out = slash("unlock")
+check(out == [L.PREFIX + L.OTHER_CLASS] and not ns.unlocked and not list(G.VisibleFrames().values()),
+      f"another class: no move mode, and it says why: {out}")
+
 blocked = sorted(set(G.BLOCKED.values()))
 check(not blocked, f"nothing secure touched in a fight (the game blocks it): {blocked}")
 leaks = sorted(set(G.LEAKS.values()))
