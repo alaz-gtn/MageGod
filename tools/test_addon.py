@@ -262,6 +262,8 @@ function CreateFrame(kind, name, parent, template)
   -- A text made from a template has its font; one made bare has none until it's given one
   function f:CreateFontString(_, _, template) local t = Texture() t.isFont = true if template then t.font = { template } end return t end
   function f:SetAlpha(a) self.alpha = Unwrap(a) self.hiddenAlpha = issecretvalue(a) end
+  -- The game reads the secret itself: the frame gets one alpha or the other
+  function f:SetAlphaFromBoolean(b, yes, no) if Unwrap(b) then self.alpha = yes else self.alpha = no end end
   function f:SetStatusBarColor(...) self.barColor = { ... } end
   function f:SetShown(v) self.shown = v and true or false end
   function f:Hide() self.shown = false end function f:Show() self.shown = true end
@@ -1891,6 +1893,19 @@ S.uninterruptible = True
 G.Fire("UNIT_SPELLCAST_START", "target")
 check(not kick.shown, "a cast that can't be cut: nothing")
 S.uninterruptible = None
+S.uninterruptible = G.Hidden(True)
+G.Fire("UNIT_SPELLCAST_START", "target")
+check(kick.shown and kick.inner.alpha == 0, f"in a fight the game hides that it can't be cut: the game hides the icon: {kick.inner.alpha}")
+S.uninterruptible = G.Hidden(False)
+G.Fire("UNIT_SPELLCAST_NOT_INTERRUPTIBLE", "target")
+check(kick.shown and kick.inner.alpha == 1, "hidden, and it can be cut: the icon shows")
+S.uninterruptible = True
+G.Fire("UNIT_SPELLCAST_NOT_INTERRUPTIBLE", "target")
+check(not kick.shown, "the cast becomes uncuttable halfway: gone")
+S.uninterruptible = None
+G.Fire("UNIT_SPELLCAST_INTERRUPTIBLE", "target")
+check(kick.shown and kick.inner.alpha == 1, "and cuttable again: back")
+check(kick.width == 30, f"small by default: {kick.width}")
 S.casting = None
 G.Fire("UNIT_SPELLCAST_STOP", "target")
 check(not kick.shown, "the cast over: gone")

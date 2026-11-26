@@ -7,7 +7,7 @@ local L = ns.L
 -- it's enough to know that it is casting
 local COUNTERSPELL = { 2139 }
 local DEFAULT_POINT = { "CENTER", "CENTER", 0, 200 }
-local SIZE = 44
+local SIZE = 30
 
 local db, frame
 local spell -- the Counterspell you know
@@ -24,7 +24,9 @@ local function Resolve()
 	end
 end
 
--- Is the target casting something you can interrupt? A hidden spell still counts as a cast
+-- Is the target casting? And can it be cut: true, false, or the game's secret "can't be cut" (in a
+-- fight Forever may hide it; then the game itself shows or hides the icon). A hidden spell still
+-- counts as a cast
 local function Casting()
 	if not UnitExists("target") then return false end
 	local hostile = UnitCanAttack("player", "target")
@@ -36,8 +38,8 @@ local function Casting()
 			local notInterruptible, castBar
 			if get == UnitCastingInfo then notInterruptible, castBar = b, d else notInterruptible, castBar = a, e end
 			if ns.IsSecret(name) or name ~= nil or (not ns.IsSecret(castBar) and castBar ~= nil) then
-				if not ns.IsSecret(notInterruptible) and notInterruptible == true then return false end
-				return true
+				if ns.IsSecret(notInterruptible) then return true, notInterruptible end
+				return true, notInterruptible ~= true
 			end
 		end
 	end
@@ -61,13 +63,20 @@ end
 
 function ns.UpdateKick()
 	if not frame then return end
-	local show
+	local show, cuttable = false, true
 	if ns.unlocked then
 		show = db.enabled and ns.IsMage()
-	else
-		show = db.enabled and ns.IsMage() and spell ~= nil and Casting() and Ready() and InReach()
+	elseif db.enabled and ns.IsMage() and spell ~= nil then
+		local casting
+		casting, cuttable = Casting()
+		-- A secret can't be compared: only a plain "no" hides it here
+		show = casting and (ns.IsSecret(cuttable) or cuttable) and Ready() and InReach()
 	end
 	if show then
+		-- Whether it can be cut, as the game says even when it keeps it from the addon: the game
+		-- shows or hides the icon itself (the secret is "can't be cut": true hides it)
+		frame.inner:SetAlpha(1)
+		if ns.IsSecret(cuttable) then pcall(frame.inner.SetAlphaFromBoolean, frame.inner, cuttable, 0, 1) end
 		frame.icon:SetTexture(ns.SpellIcon(spell or COUNTERSPELL[1]))
 		if not frame:IsShown() then frame.glow:Play() end
 		frame:Show()
@@ -93,10 +102,13 @@ events:SetScript("OnEvent", function(self, event)
 		frame = CreateFrame("Frame", "MageGodKick", UIParent)
 		frame:SetSize(SIZE, SIZE)
 		frame:SetFrameStrata("HIGH")
-		frame.edge = frame:CreateTexture(nil, "BACKGROUND")
+		-- What shows, in its own frame: the game may set its see-through for a cast it hides
+		frame.inner = CreateFrame("Frame", nil, frame)
+		frame.inner:SetAllPoints()
+		frame.edge = frame.inner:CreateTexture(nil, "BACKGROUND")
 		frame.edge:SetAllPoints()
 		frame.edge:SetColorTexture(0, 0, 0, 1)
-		frame.icon = frame:CreateTexture(nil, "ARTWORK")
+		frame.icon = frame.inner:CreateTexture(nil, "ARTWORK")
 		frame.icon:SetPoint("TOPLEFT", 1, -1)
 		frame.icon:SetPoint("BOTTOMRIGHT", -1, 1)
 		frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
@@ -112,7 +124,8 @@ events:SetScript("OnEvent", function(self, event)
 		table.insert(ns.refreshers, ns.UpdateKick)
 		spell = Resolve()
 		for _, e in ipairs({ "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_CHANNEL_START",
-			"UNIT_SPELLCAST_CHANNEL_STOP", "UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_FAILED" }) do
+			"UNIT_SPELLCAST_CHANNEL_STOP", "UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_FAILED",
+			"UNIT_SPELLCAST_INTERRUPTIBLE", "UNIT_SPELLCAST_NOT_INTERRUPTIBLE" }) do
 			Listen(e, "target")
 		end
 		Listen("PLAYER_TARGET_CHANGED")

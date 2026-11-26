@@ -1,3 +1,8 @@
+# 1.2.3
+
+- **Counterspell ready no longer shows for casts that can't be cut.** In a fight Forever hides from addons whether a cast can be interrupted; the icon now lets the game itself show or hide it, and follows a cast that turns cuttable or uncuttable halfway.
+- **The Counterspell icon is smaller by default** (30 instead of 44), like the family's other icons.
+
 # 1.2.2
 
 - **With every ...God addon on**: on a character of another class this one stays out of the way. It says nothing in the chat (a vendor no longer hears the same line from each addon) and won't enter move mode; it tells you why if you try.
