@@ -5,10 +5,17 @@
 ### At a glance
 
 - 💜 **Purple lightning on Missile Barrage**: a big strike when it procs, calmer lightning while it lasts and the seconds it has left underneath
-- ✨ **Blink is back**: its icon pops up big in the middle of the screen every time it's ready again
-- 🛡️ **Buff reminders**: your armor, Arcane Intellect, mana gem and Well Fed (+5% XP from kills in Forever). Click one to cast it
+- 🔥 **More procs, each with its talent**: Clearcasting as a circle of arcane light at your feet, Heating Up as embers rising at your sides, Fingers of Frost as a snowflake by each hand
+- ✨ **Big cooldowns back**: Blink, Evocation, Ice Block, Cold Snap, Presence of Mind, Arcane Power and Combustion pop up big in the middle of the screen when they're ready again
+- 🚫 **Counterspell ready** while your target casts something you can cut
+- 🎯 **Your debuffs on the target**: Fire Vulnerability and Winter's Chill beside its nameplate, with stacks and seconds
+- 🛡️ **Buff reminders**: your armor (pick which one with a click), Arcane Intellect, mana gem and Well Fed (+5% XP from kills in Forever). Click one to cast it
+- 👥 **Group buffs**: who in your group is missing your Arcane Intellect; a click casts it on them
+- 🪄 **Wand swing timer**: when your wand's next shot comes
+- 🧪 **Reagents running low**: runes for teleports and portals, Arcane Powder, Light Feathers (not with Reagent Economy)
+- 🌿 **Herbs and minerals tracking**, ⚒️ **gear wearing out** and 🎒 **bags filling up**
 - 📜 **Comprehension scrolls**: Imbue and Familiar, one click to use them; one click to decipher the scrolls you carry and to open your Bundle of Scrolls
-- 🧊 **Ice Barrier and Mana Shield bar**: what's left of your shield
+- 🧊 **Shield bar**: what's left of Ice Barrier, Mana Shield, Fire Ward, Frost Ward, a priest's Power Word: Shield or a protection potion, each in its own colour
 - 💧 **Five-second rule bar (MP5)**: when your Spirit gives mana back, and each tick
 - 📏 **Range to your target**: melee, Frost Nova, in range of your main spell, at the edge of it or out of range, on the target's nameplate
 - ⚠️ **Aggro warning** in a group, before you pull it off the tank
@@ -17,10 +24,17 @@
 ### De un vistazo
 
 - 💜 **Rayos morados con Missile Barrage** (el proc de Proyectiles Arcanos): un gran relámpago al salir, rayos más tranquilos mientras dura y debajo los segundos que le quedan
-- ✨ **Traslación lista**: su icono sale en grande en el centro de la pantalla cada vez que vuelve
-- 🛡️ **Recordatorios de bufos**: tu armadura, Intelecto Arcano, la gema de maná y Bien alimentado (+5% de experiencia por muerte en Forever). Con un clic se lanza
+- 🔥 **Más procs, cada uno con su talento**: Clearcasting como un círculo arcano a tus pies, Heating Up como brasas a tus lados y Fingers of Frost como un copo junto a cada mano
+- ✨ **Cooldowns que vuelven**: Traslación, Evocación, Bloque de hielo, Cold Snap, Presencia mental, Poder Arcano y Combustión salen en grande en el centro cuando vuelven
+- 🚫 **Contrahechizo listo** mientras tu objetivo lanza algo que se puede cortar
+- 🎯 **Tus debuffs en el objetivo**: Fire Vulnerability y Winter's Chill junto a su placa, con cargas y segundos
+- 🛡️ **Recordatorios de bufos**: tu armadura (eliges cuál con un clic), Intelecto Arcano, la gema de maná y Bien alimentado (+5% de experiencia por muerte en Forever). Con un clic se lanza
+- 👥 **Bufos del grupo**: quién de tu grupo no tiene tu Intelecto Arcano; con un clic se lo lanzas
+- 🪄 **Barra de la varita**: cuándo sale el próximo disparo
+- 🧪 **Reactivos bajos**: runas de teletransporte y portal, Polvo arcano, Plumas ligeras (no con Reagent Economy)
+- 🌿 **Rastreo de hierbas y minerales**, ⚒️ **equipo gastado** y 🎒 **bolsas llenas**
 - 📜 **Pergaminos de Comprensión**: Imbuir y Familiar, con un clic se usan; con un clic se descifran los que llevas y se abre el paquete de pergaminos
-- 🧊 **Barra de Barrera de hielo y Escudo de maná**: lo que le queda a tu escudo
+- 🧊 **Barra de escudos**: lo que le queda a Barrera de hielo, Escudo de maná, Guarda contra el fuego o la escarcha, el Palabra de poder: escudo de un sacerdote o una poción de protección, cada uno de su color
 - 💧 **Barra de la regla de los 5 segundos (MP5)**: cuándo te devuelve maná el Espíritu, y cada tick
 - 📏 **Distancia al objetivo**: cuerpo a cuerpo, Nova de Escarcha, a tiro de tu hechizo principal, al límite o fuera de alcance, en la placa del objetivo
 - ⚠️ **Aviso de agro** en grupo, antes de quitárselo al tanque
@@ -54,6 +68,8 @@ Forever hides your buffs, your cooldowns and what your shield absorbs from addon
 - `/magegod unlock` · `lock`: move the displays
 - `/magegod lightning` · `rayos`: try the Missile Barrage lightning
 - `/magegod blink` · `traslacion`: try the Blink pulse
+- `/magegod procs`: try Clearcasting, Heating Up and Fingers of Frost
+- `/magegod wand` · `varita`: try the wand's swing timer
 - `/magegod buffs` · `bufos`: what the addon sees of your buffs
 - `/magegod range` · `rango`: what each range check says about your target
 - `/magegod respec` · `talentos`: when the talent reset price drops
