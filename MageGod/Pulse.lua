@@ -1,10 +1,22 @@
 local _, ns = ...
 local L = ns.L
 
--- When Blink is back: its icon big in the middle of the screen, fading fast. In combat Forever
--- hides how long a cooldown has left, but not whether it is running: the pulse comes when Blink
--- goes from cooling down to ready.
+-- When Blink is back, or another big cooldown of yours (Evocation, Ice Block, Cold Snap, Presence
+-- of Mind, Arcane Power, Combustion): its icon big in the middle of the screen, fading fast. In
+-- combat Forever hides how long a cooldown has left, but not whether it is running: the pulse comes
+-- when the spell goes from cooling down to ready. Two back at once pulse one after the other.
+-- Only the ones you know, each with its own switch
 local BLINK = { 1953 }
+local TRACKED = {
+	{ key = "blink", ids = BLINK },
+	{ key = "evocation", ids = { 12051 } },
+	{ key = "iceBlock", ids = { 11958 } },
+	{ key = "coldSnap", ids = { 12472 } },
+	{ key = "presence", ids = { 12043 } },
+	{ key = "arcanePower", ids = { 12042 } },
+	{ key = "combustion", ids = { 11129 } },
+}
+ns.PULSE_SPELLS = TRACKED
 local DEFAULT_POINT = { "CENTER", "CENTER", 0, 80 }
 local GCD_MAX = 2.5 -- no global cooldown lasts this long: a longer wait was Blink's own
 local POLL = 0.1
@@ -15,20 +27,21 @@ local STAR = "Interface\\Cooldown\\star4"
 
 local db
 local place, art
-local spell -- the Blink you know
-local since -- when it was first seen cooling down
-local own = false -- known to be Blink's own cooldown, not the global one
-local castAt -- when you last cast it
-local blind -- since when the game won't say whether it is cooling down
+-- Each tracked spell's state: spell (the one you know), since (first seen cooling down), own (known
+-- to be its own cooldown, not the global one), castAt (when you last cast it), blind (since when
+-- the game won't say whether it is cooling down)
+local states = {}
+for _, t in ipairs(TRACKED) do states[t.key] = { own = false } end
 local playing -- when the pulse started
+local queue = {} -- spells waiting for their pulse
 
-local function Resolve()
-	for _, id in ipairs(BLINK) do
+local function Resolve(ids)
+	for _, id in ipairs(ids) do
 		local known = IsPlayerSpell and IsPlayerSpell(id)
 		if known and not ns.IsSecret(known) then return id end
 	end
 	-- Forever may give it another number: the spellbook answers for its name
-	local name = ns.SpellName(BLINK[1])
+	local name = ns.SpellName(ids[1])
 	local info = name and C_Spell and C_Spell.GetSpellInfo and C_Spell.GetSpellInfo(name)
 	if type(info) == "table" and not ns.IsSecret(info) then
 		local id = info.spellID
@@ -37,7 +50,7 @@ local function Resolve()
 end
 
 -- Is it cooling down? nil when the game won't say
-local function Cooling()
+local function Cooling(spell)
 	local info = C_Spell.GetSpellCooldown(spell)
 	if type(info) ~= "table" or ns.IsSecret(info) then return nil end
 	local active = info.isActive
@@ -50,7 +63,7 @@ local function Cooling()
 end
 
 -- Is that its own cooldown and not the global one? nil when the game won't say
-local function Own(info)
+local function Own(info, spell)
 	local duration = info.duration
 	if duration and not ns.IsSecret(duration) then return duration > 1.6 end
 	local gcd = info.isOnGCD
@@ -111,7 +124,7 @@ local function Rest()
 	if playing then return end
 	place:SetSize(db.size, db.size)
 	if ns.unlocked and db.enabled and ns.IsMage() then
-		art.icon:SetTexture(ns.SpellIcon(spell or BLINK[1]))
+		art.icon:SetTexture(ns.SpellIcon(states.blink.spell or BLINK[1]))
 		place:Show()
 		Paint(1, 1, 0, 1)
 	else
@@ -119,23 +132,42 @@ local function Rest()
 	end
 end
 
+local function Start(spell)
+	art.icon:SetTexture(ns.SpellIcon(spell))
+	art.shine:SetVertexColor(db.color.r, db.color.g, db.color.b)
+	playing = GetTime()
+	place:SetSize(db.size, db.size)
+	place:Show()
+	Paint(Frame(0))
+end
+
 local function Animate()
 	local t = GetTime() - playing
 	if t >= POP + HOLD + FADE then
 		playing = nil
+		-- The next one back, if two came at once
+		local nextSpell = table.remove(queue, 1)
+		if nextSpell then
+			Start(nextSpell)
+			return
+		end
 		Rest()
 		return
 	end
 	Paint(Frame(t))
 end
 
+-- A spell's pulse: now, or after the one playing
+local function Pulse(spell)
+	if playing then
+		queue[#queue + 1] = spell
+		return
+	end
+	Start(spell)
+end
+
 function ns.PulseBlink()
-	art.icon:SetTexture(ns.SpellIcon(spell or BLINK[1]))
-	art.shine:SetVertexColor(db.color.r, db.color.g, db.color.b)
-	playing = GetTime()
-	place:SetSize(db.size, db.size)
-	place:Show()
-	Paint(Frame(0))
+	Start(states.blink.spell or BLINK[1])
 end
 
 function ns.StylePulse()
@@ -144,30 +176,46 @@ function ns.StylePulse()
 	Rest()
 end
 
--- Checks whether Blink is back
-local function Check()
-	if not spell then return end
+-- Checks whether one spell is back
+local function CheckOne(t)
+	local s = states[t.key]
+	if not s.spell then return end
 	local now = GetTime()
-	local cooling, info = Cooling()
+	local cooling, info = Cooling(s.spell)
 	if cooling == nil then
-		blind = blind or now
+		s.blind = s.blind or now
 		return
 	end
 	-- After a stretch where the game wouldn't say, what it says now may be old news
-	local stale = blind and now - blind > 1
-	blind = nil
+	local stale = s.blind and now - s.blind > 1
+	s.blind = nil
 	if cooling then
-		if not since then since = now end
-		if not own and Own(info) then own = true end
-	elseif since then
-		if not stale and (own or now - since > GCD_MAX) and db.enabled and ns.IsMage()
-			and not UnitIsDeadOrGhost("player") then
-			ns.PulseBlink()
+		if not s.since then s.since = now end
+		if not s.own and Own(info, s.spell) then s.own = true end
+	elseif s.since then
+		if not stale and (s.own or now - s.since > GCD_MAX) and db.enabled and db.spells[t.key] ~= false
+			and ns.IsMage() and not UnitIsDeadOrGhost("player") then
+			Pulse(s.spell)
 		end
-		since, own = nil, false
-	elseif own and castAt and now - castAt > 1 then
-		own = false -- the cast never showed a cooldown
+		s.since, s.own = nil, false
+	elseif s.own and s.castAt and now - s.castAt > 1 then
+		s.own = false -- the cast never showed a cooldown
 	end
+end
+
+local function Check()
+	for _, t in ipairs(TRACKED) do CheckOne(t) end
+end
+
+local function Waiting()
+	for _, s in pairs(states) do
+		if s.since or s.own then return true end
+	end
+	return false
+end
+
+local function ResolveAll()
+	for _, t in ipairs(TRACKED) do states[t.key].spell = Resolve(t.ids) end
 end
 
 -- Watched often only while it is cooling down, or just cast
@@ -179,12 +227,12 @@ poller:SetScript("OnUpdate", function(self, elapsed)
 	if waited < POLL then return end
 	waited = 0
 	Check()
-	if not since and not own then self:Hide() end
+	if not Waiting() then self:Hide() end
 end)
 
 local function Watch()
 	Check()
-	if since or own then poller:Show() end
+	if Waiting() then poller:Show() end
 end
 
 -- /magegod blink: shows it
@@ -198,7 +246,9 @@ ns.commands["traslación"] = Test
 
 -- For the tests
 function ns.PulseState()
-	return { place = place, art = art, spell = spell, since = since, own = own, poller = poller }
+	local b = states.blink
+	return { place = place, art = art, spell = b.spell, since = b.since, own = b.own, poller = poller, states = states,
+		queue = queue }
 end
 
 local events = CreateFrame("Frame")
@@ -217,23 +267,25 @@ events:SetScript("OnEvent", function(self, event, unit, _, spellID)
 		end)
 		ns.Movable(place, "pulse", DEFAULT_POINT, L.PULSE_NAME)
 		table.insert(ns.refreshers, ns.StylePulse)
-		spell = Resolve()
+		ResolveAll()
 		self:RegisterEvent("SPELL_UPDATE_COOLDOWN")
 		self:RegisterEvent("SPELLS_CHANGED")
 		self:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
 		ns.StylePulse()
 		Watch()
 	elseif event == "SPELLS_CHANGED" then
-		spell = Resolve()
+		ResolveAll()
 		Watch()
 	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-		if unit ~= "player" or not spellID or ns.IsSecret(spellID) or not spell then return end
-		if spellID ~= spell then
-			-- The same spell under another number
-			local name = ns.SpellName(spellID)
-			if not name or ns.IsSecret(name) or name ~= ns.SpellName(spell) then return end
+		if unit ~= "player" or not spellID or ns.IsSecret(spellID) then return end
+		local name = ns.SpellName(spellID)
+		for _, t in ipairs(TRACKED) do
+			local s = states[t.key]
+			-- The same spell under another number counts too
+			if s.spell and (spellID == s.spell or name and not ns.IsSecret(name) and name == ns.SpellName(s.spell)) then
+				s.own, s.castAt = true, GetTime()
+			end
 		end
-		own, castAt = true, GetTime()
 		Watch()
 	elseif event == "SPELL_UPDATE_COOLDOWN" then
 		Watch()

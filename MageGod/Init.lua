@@ -15,6 +15,14 @@ local defaults = {
 	},
 	lastArmor = nil, -- the armor you cast last: frost | ice | mage | molten
 	gems = { enabled = true, all = false },
+	-- Herbalism or Mining: Find Herbs or Find Minerals on, out in the world (last: the one you had on)
+	gather = { enabled = true },
+	-- Runes for teleports and portals, Arcane Powder, Light Feathers running low (not with Reagent Economy)
+	reagents = { enabled = true },
+	-- In a group, Arcane Intellect missing on someone: a click casts it on them
+	groupBuffs = { enabled = true },
+	-- Gear under this % and bags with this many free slots or fewer
+	repair = { enabled = true, low = 25, bags = 2 },
 	food = { enabled = true },
 	-- Forever's mage scrolls that last an hour: a weapon imbue and a familiar
 	scrolls = { imbue = true, familiar = true, decipher = true },
@@ -27,7 +35,21 @@ local defaults = {
 	barrier = {
 		enabled = true, width = 160, height = 14, text = true, time = true,
 		icon = true, -- the shield's icon on a tag at its left end, as the mana bar has MP5
-		color = { r = 0.52, g = 0.78, b = 0.92 }, -- frost
+		color = { r = 0.52, g = 0.78, b = 0.92 }, -- Ice Barrier's, and a shield the addon can't tell: frost
+		-- Each other shield in its own colour; the protection potions in their school's
+		colors = {
+			manaShield = { r = 0.6, g = 0.5, b = 1 }, -- arcane
+			fireWard = { r = 1, g = 0.5, b = 0.15 },
+			frostWard = { r = 0.75, g = 0.95, b = 1 }, -- paler than Ice Barrier
+			powerWord = { r = 1, g = 0.92, b = 0.6 }, -- a priest's Power Word: Shield
+			fire = { r = 1, g = 0.42, b = 0.1 },
+			frost = { r = 0.45, g = 0.75, b = 1 },
+			nature = { r = 0.4, g = 0.85, b = 0.3 },
+			shadow = { r = 0.62, g = 0.38, b = 0.85 },
+			arcane = { r = 0.85, g = 0.55, b = 1 },
+			holy = { r = 1, g = 0.85, b = 0.35 },
+		},
+		potions = true, -- the protection potions too: each absorbs a school's damage for 2 minutes
 	},
 	-- The five-second rule: how long until your Spirit gives mana back, then each tick
 	mana = {
@@ -38,6 +60,8 @@ local defaults = {
 			regen = { r = 0.38, g = 0.56, b = 0.7 }, -- your mana coming back: a quiet blue
 		},
 	},
+	-- Your wand's swing timer: when the next shot comes
+	wand = { enabled = true, width = 160, height = 10, icon = true, time = true, color = { r = 0.25, g = 0.78, b = 0.92 } },
 	-- Purple lightning on both sides of you while Missile Barrage is up
 	missiles = {
 		enabled = true,
@@ -51,13 +75,35 @@ local defaults = {
 		learned = {}, -- other spells the addon saw by Missile Barrage's name
 		ignored = {}, -- ones it saw always on: a passive, not the proc
 	},
+	-- Clearcasting, Heating Up and Fingers of Frost around you, each with its talent: small and
+	-- see-through by default, as HunterGod's procs
+	procs = {
+		size = 40, -- %
+		gap = 120, -- from the middle to each side of the embers; the snowflakes go half as far
+		alpha = 60, -- the burst as it procs, %
+		calm = 20, -- afterwards, while it lasts: fainter, %
+		timer = true, -- the seconds each has left
+		timerSize = 20,
+		clearcasting = { enabled = true, color = { r = 0.72, g = 0.62, b = 1 } }, -- arcane lilac
+		heating = { enabled = true, color = { r = 1, g = 0.45, b = 0.1 } }, -- embers
+		fingers = { enabled = true, color = { r = 0.45, g = 0.8, b = 1 } }, -- ice
+		learned = {}, -- other spells the addon saw by these buffs' names
+		ignored = {}, -- ones it saw always on: a passive, not the proc
+	},
 	-- Blink's icon big in the middle of the screen each time it's ready again
 	pulse = {
 		enabled = true,
 		size = 80,
 		alpha = 90, -- %
 		color = { r = 0.25, g = 0.78, b = 0.92 }, -- the shine behind it
+		-- Which cooldowns pulse when they're back (only the ones you know)
+		spells = { blink = true, evocation = true, iceBlock = true, coldSnap = true, presence = true,
+			arcanePower = true, combustion = true },
 	},
+	-- Counterspell ready while your target casts
+	kick = { enabled = true },
+	-- Fire Vulnerability and Winter's Chill on your target, beside its nameplate
+	debuffs = { enabled = true },
 	range = {
 		enabled = true,
 		spell = "auto", -- auto (the last one you cast) | frostbolt | fireball | missiles

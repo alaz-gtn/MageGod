@@ -15,6 +15,7 @@ local L = {
 	FOOD_NAME = "Food and scrolls",
 	FOOD_MISSING = "No XP from food",
 	CLICK_CAST = "Click: cast it",
+	CLICK_PICK_ARMOR = "Click: pick the armor to put on",
 	CLICK_USE = "Click: use it",
 	CLICK_FOOD = "Click: your XP food",
 	CLICK_EAT = "Click: eat it",
@@ -109,6 +110,30 @@ local L = {
 	OPT_MISSILES_TIMER_SIZE = "Size of the number",
 	OPT_MISSILES_COLOR = "Lightning colour",
 	OPT_MISSILES_TEST = "See how it looks",
+	OPT_PULSE_ALSO = "Also when %s is back",
+	KICK_NAME = "Interrupt",
+	OPT_KICK = "%s ready while your target casts",
+	OPT_DEBUFFS = "%s and %s on your target, with stacks and seconds, beside its nameplate",
+	PROCS_NAME = "Clearcasting, Heating Up and Fingers of Frost",
+	PROCS_WATCHING = "%s: watching spells %s.",
+	PROCS_NOT_READY = "%s isn't set up yet: the addon builds it out of combat.",
+	PROCS_REFUSED = "the game didn't take the animations for %s, so they won't show.",
+	PROCS_NO_TALENT = "%s: not watched, you don't have %s.",
+	OPT_PROC_CLEARCASTING = "A circle of arcane light at your feet with %s (talent %s)",
+	OPT_PROC_HEATING = "Embers rising on both sides of you with %s (talent %s)",
+	OPT_PROC_FINGERS = "A snowflake by each hand with %s (talent %s)",
+	OPT_PROC_COLOR = "Colour",
+	OPT_PROC_TEST = "Try this one",
+	SEC_PROCS_LOOK = "Clearcasting, Heating Up and Fingers of Frost: how they look",
+	OPT_PROCS_SIZE = "Their size (%)",
+	OPT_PROCS_X = "Their place: left or right",
+	OPT_PROCS_Y = "Their place: down or up",
+	OPT_PROCS_GAP = "Space between the embers on each side",
+	OPT_PROCS_ALPHA = "Their strength as they proc (%)",
+	OPT_PROCS_CALM = "Their strength afterwards, while they last (%)",
+	OPT_PROCS_TIMER = "The seconds they have left",
+	OPT_PROCS_TIMER_SIZE = "Size of their number",
+	PROCS_HINT = "Each one only shows with its talent: Clearcasting (Arcane Concentration) makes your next damage spell free, Heating Up takes 25% off your next Pyroblast's cast for each charge, and Fingers of Frost makes your next 2 spells treat the target as Frozen. A burst as each procs, then a calmer version while it lasts. The game itself shows them, so they work in combat too; changes made in a fight wait until it's over. You can also drag them with Move displays.",
 	TRY = "Try it",
 	OPT_PULSE = "Its icon big in the middle each time %s is ready again",
 	OPT_PULSE_SIZE = "Size",
@@ -131,6 +156,15 @@ local L = {
 	SEC_GEMS = "Mana gems",
 	OPT_GEMS_ON = "Remind me to conjure my mana gem",
 	OPT_GEMS_ALL = "Every gem I know, not just the best one",
+	SEC_GATHER = "Gathering tracking",
+	SEC_REAGENTS = "Reagents",
+	SEC_GROUP = "Group, gear and bags",
+	OPT_GROUP_BUFFS = "In a group, who is missing your %s (a click casts it on them)",
+	OPT_REPAIR = "Remind me when my gear wears out or my bags fill up",
+	OPT_REPAIR_LOW = "Gear under (%)",
+	OPT_REPAIR_BAGS = "Free bag slots, at most",
+	OPT_REAGENTS = "Remind me when my reagents run low (runes, Arcane Powder, Light Feathers), unless I have %s",
+	OPT_GATHER = "Herbalism or Mining: remind me to turn on %s or %s out in the world",
 	SEC_FOOD = "Food",
 	OPT_FOOD_ON = "A small reminder when I'm not Well Fed (+5% XP from kills)",
 	SEC_SCROLLS = "Scrolls (Comprehension)",
@@ -138,16 +172,27 @@ local L = {
 	OPT_FAMILIAR = "Remind me to call my familiar when I carry its scroll",
 	OPT_DECIPHER = "Remind me to decipher the scrolls I carry, and to open my Bundle of Scrolls",
 	SCROLLS_HINT = "They show beside the chat with the food one, out of combat. Click one to use the scroll.",
-	SEC_BARRIER = "Barrier",
-	OPT_BARRIER = "A bar with what's left of your %s or %s",
+	SEC_BARRIER = "Shields",
+	OPT_BARRIER = "A bar with what's left of your shield: %s, %s, %s or %s",
+	OPT_SHIELD_COLOR = "Colour of %s",
+	OPT_BARRIER_POTIONS = "Protection potions too, in their school's colour",
 	OPT_BARRIER_WIDTH = "Width",
 	OPT_BARRIER_HEIGHT = "Height",
 	OPT_BARRIER_TEXT = "Show how much it still absorbs",
 	OPT_BARRIER_TIME = "Show the seconds it has left",
 	OPT_BARRIER_ICON = "The shield's icon beside it",
 	OPT_BARRIER_COLOR = "Its colour",
-	BARRIER_HINT = "Move it over the game's own bars with the Move displays button.",
+	BARRIER_HINT = "A priest's Power Word: Shield shows too, out of combat. The game only gives the total of every shield on you: with two at once the bar shows both, in the colour of the last one. Move it over the game's own bars with the Move displays button.",
 	SEC_MANA = "Mana regeneration",
+	WAND_NAME = "Wand",
+	SEC_WAND = "Wand",
+	OPT_WAND = "A bar with when your wand's next shot comes",
+	OPT_WAND_WIDTH = "Wand bar width",
+	OPT_WAND_HEIGHT = "Wand bar height",
+	OPT_WAND_TIME = "The seconds to the next shot",
+	OPT_WAND_ICON = "Your wand's icon beside it",
+	OPT_WAND_COLOR = "Wand bar colour",
+	OPT_WAND_TEST = "See it shooting",
 	OPT_MANA = "A bar for the five-second rule: when your mana comes back",
 	OPT_MANA_TEXT = "Show the seconds left, and what each tick gives",
 	OPT_MANA_TICKS = "Then fill it up to each tick (every 2 seconds)",
@@ -201,6 +246,8 @@ local L = {
 		"  /magegod range  - what each range check says about your target",
 		"  /magegod buffs  - what the addon sees of your buffs",
 		"  /magegod lightning  - try the Missile Barrage lightning",
+		"  /magegod procs  - try Clearcasting, Heating Up and Fingers of Frost",
+		"  /magegod wand  - try the wand's swing timer",
 		"  /magegod blink  - try the pulse for Blink ready",
 		"  /magegod respec  - when the talent reset price drops",
 		"  /magegod button  - show or hide the minimap button",
@@ -217,6 +264,7 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
 	L.FOOD_NAME = "Comida y pergaminos"
 	L.FOOD_MISSING = "Sin exp de comida"
 	L.CLICK_CAST = "Clic: lanzarlo"
+	L.CLICK_PICK_ARMOR = "Clic: elegir qué armadura ponerte"
 	L.CLICK_USE = "Clic: usarlo"
 	L.CLICK_FOOD = "Clic: tu comida de exp"
 	L.CLICK_EAT = "Clic: comerla"
@@ -305,6 +353,30 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
 	L.OPT_MISSILES_TIMER_SIZE = "Tamaño del número"
 	L.OPT_MISSILES_COLOR = "Color de los rayos"
 	L.OPT_MISSILES_TEST = "Ver cómo queda"
+	L.OPT_PULSE_ALSO = "También cuando vuelve %s"
+	L.KICK_NAME = "Interrupción"
+	L.OPT_KICK = "%s listo mientras tu objetivo lanza algo"
+	L.OPT_DEBUFFS = "%s y %s en tu objetivo, con cargas y segundos, junto a su placa"
+	L.PROCS_NAME = "Clearcasting, Heating Up y Fingers of Frost"
+	L.PROCS_WATCHING = "%s: vigilando los hechizos %s."
+	L.PROCS_NOT_READY = "%s aún no está montado: el addon lo monta fuera de combate."
+	L.PROCS_REFUSED = "el juego no aceptó las animaciones de %s, así que no saldrán."
+	L.PROCS_NO_TALENT = "%s: no se vigila, no tienes %s."
+	L.OPT_PROC_CLEARCASTING = "Un círculo de luz arcana a tus pies con %s (talento %s)"
+	L.OPT_PROC_HEATING = "Brasas subiendo a ambos lados con %s (talento %s)"
+	L.OPT_PROC_FINGERS = "Un copo de hielo junto a cada mano con %s (talento %s)"
+	L.OPT_PROC_COLOR = "Color"
+	L.OPT_PROC_TEST = "Probar este"
+	L.SEC_PROCS_LOOK = "Clearcasting, Heating Up y Fingers of Frost: cómo se ven"
+	L.OPT_PROCS_SIZE = "Su tamaño (%)"
+	L.OPT_PROCS_X = "Su sitio: izquierda o derecha"
+	L.OPT_PROCS_Y = "Su sitio: abajo o arriba"
+	L.OPT_PROCS_GAP = "Separación entre las brasas de cada lado"
+	L.OPT_PROCS_ALPHA = "Su intensidad al salir (%)"
+	L.OPT_PROCS_CALM = "Su intensidad después, mientras duran (%)"
+	L.OPT_PROCS_TIMER = "Los segundos que les quedan"
+	L.OPT_PROCS_TIMER_SIZE = "Tamaño de su número"
+	L.PROCS_HINT = "Cada uno sale solo con su talento: Clearcasting (Arcane Concentration) hace gratis tu próximo hechizo de daño, Heating Up quita un 25 % al lanzamiento de tu próximo Pyroblast por cada carga y Fingers of Frost hace que tus 2 próximos hechizos traten al objetivo como congelado. Un estallido al salir cada uno y después una versión más tranquila mientras dura. Los muestra el propio juego, así que también salen en combate; lo que cambies en una pelea se aplica al acabar. También puedes arrastrarlos con Mover avisos."
 	L.TRY = "Probar"
 	L.OPT_PULSE = "Su icono en grande en el centro cada vez que vuelve %s"
 	L.OPT_PULSE_SIZE = "Tamaño"
@@ -327,6 +399,15 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
 	L.SEC_GEMS = "Gemas de maná"
 	L.OPT_GEMS_ON = "Recordarme conjurar mi gema de maná"
 	L.OPT_GEMS_ALL = "Todas las gemas que sé hacer, no solo la mejor"
+	L.SEC_GATHER = "Rastreo de recolección"
+	L.SEC_REAGENTS = "Reactivos"
+	L.SEC_GROUP = "Grupo, equipo y bolsas"
+	L.OPT_GROUP_BUFFS = "En grupo, quién no tiene tu %s (con un clic se lo lanzas)"
+	L.OPT_REPAIR = "Avisarme cuando se me gaste el equipo o se me llenen las bolsas"
+	L.OPT_REPAIR_LOW = "Equipo por debajo de (%)"
+	L.OPT_REPAIR_BAGS = "Huecos libres en las bolsas, como mucho"
+	L.OPT_REAGENTS = "Avisarme cuando me queden pocos reactivos (runas, Polvo arcano, Plumas ligeras), salvo si tengo %s"
+	L.OPT_GATHER = "Herboristería o Minería: recordarme poner %s o %s fuera de mazmorras"
 	L.SEC_FOOD = "Comida"
 	L.OPT_FOOD_ON = "Un aviso pequeño cuando no llevo Bien alimentado (+5% de exp por muerte)"
 	L.SEC_SCROLLS = "Pergaminos (Comprensión)"
@@ -334,16 +415,27 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
 	L.OPT_FAMILIAR = "Recordarme llamar a mi familiar cuando llevo su pergamino"
 	L.OPT_DECIPHER = "Recordarme descifrar los pergaminos que llevo y abrir el paquete de pergaminos"
 	L.SCROLLS_HINT = "Salen junto al chat con el de la comida, fuera de combate. Haz clic en uno para usar el pergamino."
-	L.SEC_BARRIER = "Barrera"
-	L.OPT_BARRIER = "Una barra con lo que le queda a tu %s o a tu %s"
+	L.SEC_BARRIER = "Escudos"
+	L.OPT_BARRIER = "Una barra con lo que le queda a tu escudo: %s, %s, %s o %s"
+	L.OPT_SHIELD_COLOR = "Color de %s"
+	L.OPT_BARRIER_POTIONS = "También las pociones de protección, del color de su escuela"
 	L.OPT_BARRIER_WIDTH = "Ancho"
 	L.OPT_BARRIER_HEIGHT = "Alto"
 	L.OPT_BARRIER_TEXT = "Mostrar cuánto absorbe todavía"
 	L.OPT_BARRIER_TIME = "Mostrar los segundos que le quedan"
 	L.OPT_BARRIER_ICON = "El icono del escudo al lado"
 	L.OPT_BARRIER_COLOR = "Su color"
-	L.BARRIER_HINT = "Ponla encima de las barras del juego con el botón Mover avisos."
+	L.BARRIER_HINT = "El Palabra de poder: escudo de un sacerdote también sale, fuera de combate. El juego solo da el total de todos los escudos que llevas: con dos a la vez la barra muestra los dos, del color del último. Ponla encima de las barras del juego con el botón Mover avisos."
 	L.SEC_MANA = "Regeneración de maná"
+	L.WAND_NAME = "Varita"
+	L.SEC_WAND = "Varita"
+	L.OPT_WAND = "Una barra con cuándo sale el próximo disparo de la varita"
+	L.OPT_WAND_WIDTH = "Ancho de la barra de la varita"
+	L.OPT_WAND_HEIGHT = "Alto de la barra de la varita"
+	L.OPT_WAND_TIME = "Los segundos hasta el próximo disparo"
+	L.OPT_WAND_ICON = "El icono de tu varita al lado"
+	L.OPT_WAND_COLOR = "Color de la barra de la varita"
+	L.OPT_WAND_TEST = "Verla disparando"
 	L.OPT_MANA = "Una barra para la regla de los 5 segundos: cuándo vuelve tu maná"
 	L.OPT_MANA_TEXT = "Mostrar los segundos que faltan y lo que da cada tick"
 	L.OPT_MANA_TICKS = "Después, llenarla hasta cada tick (cada 2 segundos)"
@@ -395,6 +487,8 @@ if GetLocale() == "esES" or GetLocale() == "esMX" then
 		"  /magegod rango  - qué dice cada comprobación de distancia de tu objetivo",
 		"  /magegod bufos  - lo que el addon ve de tus bufos",
 		"  /magegod rayos  - probar los rayos del proc de Proyectiles Arcanos",
+		"  /magegod procs  - probar Clearcasting, Heating Up y Fingers of Frost",
+		"  /magegod varita  - probar la barra de la varita",
 		"  /magegod traslacion  - probar el aviso de Traslación lista",
 		"  /magegod talentos  - cuándo baja el precio de reiniciar talentos",
 		"  /magegod boton  - mostrar u ocultar el botón del minimapa",

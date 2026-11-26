@@ -6,7 +6,7 @@ local SPELLS = {
 	frost = { 168, 7300, 7301 }, -- Frost Armor
 	ice = { 7302, 7320, 10219, 10220 }, -- Ice Armor
 	mage = { 6117, 22782, 22783 }, -- Mage Armor
-	molten = { 30482 }, -- Molten Armor, should Forever have it
+	molten = { 428741, 428743, 429307, 456403, 30482 }, -- Molten Armor, should Forever give it to you
 	intellect = { 1459, 1460, 1461, 10156, 10157 }, -- Arcane Intellect
 	brilliance = { 23028 }, -- Arcane Brilliance
 	dampen = { 604, 8450, 8451, 10173, 10174 }, -- Dampen Magic
@@ -159,7 +159,7 @@ local function Reminders()
 			left = max(left, 0)
 		end
 		list[#list + 1] = { icon = ns.SpellIcon(SPELLS[key][1]), left = left, name = ns.SpellName(SPELLS[key][1]),
-			spell = ns.SpellName(SPELLS[cast or key][1]) }
+			spell = ns.SpellName(SPELLS[cast or key][1]), slot = slot }
 	end
 	if db.enabled and (db.combat or not inCombat) then
 		if db.armor then
@@ -178,6 +178,7 @@ local function Reminders()
 	end
 	-- A gem is conjured out of combat
 	local gems = ns.db.gems
+	local gather = not inCombat and ns.GatherReminder()
 	if gems.enabled and not inCombat then
 		for i = #ns.GEMS, 1, -1 do
 			local gem = ns.GEMS[i]
@@ -188,6 +189,17 @@ local function Reminders()
 				if not gems.all then break end
 			end
 		end
+	end
+	-- In a group, someone without your Arcane Intellect: how many, and a click casts it on the first
+	if not inCombat then
+		for _, g in ipairs(ns.GroupBuffReminders()) do
+			list[#list + 1] = { icon = g.icon, left = 0, spell = g.unit and g.spell or nil, unit = g.unit,
+				label = tostring(g.count), name = g.text, tip = g.click }
+		end
+	end
+	-- Herbalism or Mining without its tracking on, out in the world: a click puts it on
+	if gather then
+		list[#list + 1] = { icon = gather.icon, left = 0, spell = gather.spell, track = gather.key }
 	end
 	return list
 end
@@ -237,9 +249,20 @@ castHolder:Hide()
 local function Caster_OnEnter(self)
 	GameTooltip:SetOwner(self, "ANCHOR_TOP")
 	GameTooltip:AddLine(self.spellName or "?", 1, 1, 1)
-	GameTooltip:AddLine(L.CLICK_CAST, 0.4, 0.8, 1)
+	GameTooltip:AddLine(self.armorMenu and L.CLICK_PICK_ARMOR or self.tip or L.CLICK_CAST, 0.4, 0.8, 1)
 	GameTooltip:Show()
 end
+
+-- The armors you know, one of each line: Ice Armor once you have it, else Frost Armor; Mage Armor;
+-- Molten Armor if Forever gives it to you
+local function KnownArmors()
+	local list = {}
+	if known.ice then list[#list + 1] = "ice" elseif known.frost then list[#list + 1] = "frost" end
+	if known.mage then list[#list + 1] = "mage" end
+	if known.molten then list[#list + 1] = "molten" end
+	return list
+end
+ns.KnownArmors = KnownArmors
 
 local function Caster(i)
 	local b = casters[i]
@@ -252,6 +275,10 @@ local function Caster(i)
 	b:SetAttribute("type", "spell")
 	b:SetAttribute("unit", "player") -- Arcane Intellect on you, not on whoever you have targeted
 	b:SetScript("OnEnter", Caster_OnEnter)
+	-- The armor reminder, when you know more than one: a click opens them to pick from
+	b:HookScript("OnClick", function(self, _, down)
+		if self.armorMenu and not down then ns.ToggleArmorMenu(self) end
+	end)
 	b:SetScript("OnLeave", GameTooltip_Hide)
 	casters[i] = b
 	return b
@@ -272,8 +299,17 @@ local function UpdateCasters(list)
 	for i, r in ipairs(list) do
 		if r.spell then
 			local b = Caster(i)
+			-- Armor: with a choice, the click opens the list instead of casting
+			local pick = r.slot == "armor" and #KnownArmors() > 1
+			local kind = not pick and "spell" or nil
+			if b:GetAttribute("type") ~= kind then b:SetAttribute("type", kind) end
 			if b:GetAttribute("spell") ~= r.spell then b:SetAttribute("spell", r.spell) end
-			b.spellName = r.spell
+			-- On you, or on the group member it's for
+			local unit = r.unit or "player"
+			if b:GetAttribute("unit") ~= unit then b:SetAttribute("unit", unit) end
+			b.spellName = r.name or r.spell
+			b.tip = r.tip
+			b.armorMenu = pick
 			b:Show()
 			shown = shown + 1
 		elseif casters[i] then
@@ -513,6 +549,14 @@ local function Extras(expiring)
 			list[#list + 1] = { icon = ItemIcon(BUNDLE), text = L.OPEN_BUNDLE, item = BUNDLE, use = "item:" .. BUNDLE }
 		end
 	end
+	-- Gear wearing out, bags filling up (Repair.lua)
+	for _, r in ipairs(ns.RepairReminders()) do
+		list[#list + 1] = { icon = r.icon, text = r.text }
+	end
+	-- Reagents running low (Reagents.lua): how many are left; the tooltip says what spends them
+	for _, r in ipairs(ns.ReagentReminders()) do
+		list[#list + 1] = { icon = ItemIcon(r.item), text = r.text, item = r.item, click = r.uses }
+	end
 	return list
 end
 
@@ -691,6 +735,85 @@ local function ToggleFoodMenu(row)
 end
 ns.ToggleFoodMenu = ToggleFoodMenu
 
+-- The armors to pick from, as bars beside the armor reminder; a click on one puts it on
+local armorMenu = CreateFrame("Frame", "MageGodArmorMenu", UIParent)
+armorMenu:SetFrameStrata("DIALOG")
+armorMenu:Hide()
+local armorRows = {}
+
+local function ArmorRow(i)
+	local b = armorRows[i]
+	if b then return b end
+	b = CreateFrame("Button", "MageGodArmorMenu" .. i, armorMenu, "SecureActionButtonTemplate")
+	b:RegisterForClicks("AnyUp", "AnyDown")
+	b:SetAttribute("type", "spell")
+	b:SetAttribute("unit", "player")
+	b.back = b:CreateTexture(nil, "BACKGROUND")
+	b.back:SetAllPoints()
+	b.back:SetColorTexture(0.02, 0.04, 0.09, 0.85)
+	b.stripe = b:CreateTexture(nil, "BORDER")
+	b.stripe:SetPoint("TOPLEFT")
+	b.stripe:SetPoint("BOTTOMLEFT")
+	b.stripe:SetWidth(2)
+	b.stripe:SetColorTexture(MAGE_BLUE[1], MAGE_BLUE[2], MAGE_BLUE[3], 1)
+	b.icon = b:CreateTexture(nil, "ARTWORK")
+	b.icon:SetPoint("LEFT", 6, 0)
+	b.icon:SetSize(ROW - 6, ROW - 6)
+	b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	b.edge = b:CreateTexture(nil, "BORDER")
+	b.edge:SetPoint("TOPLEFT", b.icon, -1, 1)
+	b.edge:SetPoint("BOTTOMRIGHT", b.icon, 1, -1)
+	b.edge:SetColorTexture(MAGE_BLUE[1], MAGE_BLUE[2], MAGE_BLUE[3], 0.9)
+	b.text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	b.text:SetPoint("LEFT", b.icon, "RIGHT", 7, 0)
+	b.text:SetShadowOffset(1, -1)
+	b.text:SetShadowColor(0, 0, 0, 1)
+	b.text:SetTextColor(TEXT_BLUE[1], TEXT_BLUE[2], TEXT_BLUE[3])
+	b:SetHighlightTexture("Interface\\Buttons\\UI-Listbox-Highlight2", "ADD")
+	-- Once you've picked one the list goes
+	b:HookScript("OnClick", function(_, _, down)
+		if not down and not InCombatLockdown() then armorMenu:Hide() end
+	end)
+	armorRows[i] = b
+	return b
+end
+
+function ns.ToggleArmorMenu(anchor)
+	if InCombatLockdown() then return end
+	if armorMenu:IsShown() then
+		armorMenu:Hide()
+		return
+	end
+	local list = KnownArmors()
+	local width = 120
+	for i, key in ipairs(list) do
+		local b = ArmorRow(i)
+		local name = ns.SpellName(SPELLS[key][1]) or key
+		b:ClearAllPoints()
+		b:SetPoint("TOPLEFT", 0, -(i - 1) * (ROW + ROW_GAP))
+		b:SetHeight(ROW)
+		ThinFont(b.text, 13)
+		b.text:SetText(name)
+		b.icon:SetTexture(ns.SpellIcon(SPELLS[key][1]))
+		if b:GetAttribute("spell") ~= name then b:SetAttribute("spell", name) end
+		width = max(width, b.text:GetStringWidth() + ROW + 24)
+		b:Show()
+	end
+	for i = 1, #list do armorRows[i]:SetWidth(width) end
+	for i = #list + 1, #armorRows do armorRows[i]:Hide() end
+	armorMenu:SetSize(width, max(#list * (ROW + ROW_GAP) - ROW_GAP, 1))
+	-- Where the reminder is now, on the screen, so the row can still move in a fight
+	armorMenu:ClearAllPoints()
+	local right, top = anchor:GetRight(), anchor:GetTop()
+	if right and top and not ns.IsSecret(right) then
+		armorMenu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", right + 4, top)
+	else
+		armorMenu:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 4, 0)
+	end
+	armorMenu:Show()
+end
+ns.ArmorMenu = function() return armorMenu, armorRows end
+
 local function Extra(i)
 	local b = extras[i]
 	if b then return b end
@@ -802,7 +925,7 @@ function ns.UpdateBuffs()
 		b.icon:SetTexture(r.icon)
 		-- Grey while it's missing, in colour with its time left while it runs out
 		b.icon:SetDesaturated(r.left == 0)
-		b.text:SetText(r.left > 0 and Clock(r.left) or "")
+		b.text:SetText(r.label or (r.left > 0 and Clock(r.left) or ""))
 		b:Show()
 		if not b.pulse:IsPlaying() then b.pulse:Play() end
 	end
@@ -898,29 +1021,60 @@ local function Cast(spellID)
 	ns.UpdateBuffs()
 end
 
--- What's left of your Ice Barrier or Mana Shield. Forever hides how much a shield absorbs, but
--- lets the addon hand it to a bar and its text, which the game fills in itself. The bar starts
--- full at what the shield absorbs as you cast it, and goes when it ends
-local BARRIERS = {
-	11426, 13031, 13032, 13033, -- Ice Barrier
-	1463, 8494, 8495, 10191, 10192, 10193, -- Mana Shield
+-- What's left of the shield on you, each in its own colour: Ice Barrier, Mana Shield, Fire Ward,
+-- Frost Ward, a protection potion, or a priest's Power Word: Shield. Forever hides how much a
+-- shield absorbs, but lets the addon hand it to a bar and its text, which the game fills in
+-- itself. The bar starts full at what the shield absorbs as it goes on, and goes when it ends.
+-- The game only gives the total of every shield on you: with two at once the bar shows both, in
+-- the colour of the last one
+local SHIELDS = {
+	{ key = "barrier", ids = { 11426, 13031, 13032, 13033 }, seconds = 60 }, -- Ice Barrier
+	{ key = "manaShield", ids = { 1463, 8494, 8495, 10191, 10192, 10193 }, seconds = 60 },
+	{ key = "fireWard", ids = { 543, 8457, 8458, 10223, 10225 }, seconds = 30 },
+	{ key = "frostWard", ids = { 6143, 8461, 8462, 10177, 28609 }, seconds = 30 },
+	-- Cast on you by a priest: the bar only sees it when the game lets it read your shields
+	{ key = "powerWord", ids = { 17, 592, 600, 3747, 6065, 6066, 10898, 10899, 10900, 10901 }, seconds = 30 },
+	-- The protection potions, two minutes each: by their numbers only, as other buffs share their
+	-- names (a priest's Shadow Protection)
+	{ key = "fire", ids = { 7233, 17543 }, seconds = 120, potion = true },
+	{ key = "frost", ids = { 7239, 17544 }, seconds = 120, potion = true },
+	{ key = "nature", ids = { 7254, 17546 }, seconds = 120, potion = true },
+	{ key = "shadow", ids = { 7242, 17548 }, seconds = 120, potion = true },
+	{ key = "arcane", ids = { 17549 }, seconds = 120, potion = true },
+	{ key = "holy", ids = { 7245, 17545 }, seconds = 120, potion = true },
 }
-local BARRIER_TIME = 60 -- both last a minute until the game says otherwise
-local barrierNames = {}
+ns.SHIELDS = SHIELDS
+local BARRIER_TIME = 60 -- a shield the addon can't tell: a minute until the game says otherwise
+local shieldById, shieldByName = {}, {}
+for _, shield in ipairs(SHIELDS) do
+	for _, id in ipairs(shield.ids) do shieldById[id] = shield end
+end
 local barrier
 local barrierEnds = 0 -- GetTime() when the shield runs out
 local barrierFull -- what it absorbed at the start: may be hidden
+local current -- the shield the bar shows: its colour
 
 local function Absorbs()
 	return UnitGetTotalAbsorbs and UnitGetTotalAbsorbs("player")
 end
 
 local function LearnBarriers()
-	wipe(barrierNames)
-	for _, id in ipairs(BARRIERS) do
-		local name = ns.SpellName(id)
-		if name then barrierNames[name] = id end
+	wipe(shieldByName)
+	for _, shield in ipairs(SHIELDS) do
+		local name = not shield.potion and ns.SpellName(shield.ids[1])
+		if name then shieldByName[name] = shield end
 	end
+end
+
+-- Its colour: Ice Barrier's is the bar's own, the others each their own (the potions their school's)
+local function ShieldColor(shield)
+	local o = ns.db.barrier
+	return shield and shield.key ~= "barrier" and o.colors[shield.key] or o.color
+end
+
+local function Paint()
+	local c = ShieldColor(current)
+	barrier.status:SetStatusBarColor(c.r, c.g, c.b)
 end
 
 -- How long the shield has left, from your buffs when the game shows them
@@ -937,22 +1091,46 @@ local function BarrierLeft(name)
 	end
 end
 
-local function BarrierStart(id, name)
+local function BarrierStart(id, name, shield)
 	local amount = Absorbs()
 	if not ns.IsSecret(amount) and amount == nil then return end
+	current = shield
 	barrierFull = amount
-	barrierEnds = GetTime() + (BarrierLeft(name) or BARRIER_TIME)
+	barrierEnds = GetTime() + (BarrierLeft(name) or shield.seconds)
 	barrier.icon:SetTexture(ns.SpellIcon(id))
 	barrier.status:SetMinMaxValues(0, amount)
+	Paint()
 	ns.UpdateBarrier()
 end
 
--- A shield cast: the bar starts a moment later, once the game has put it on you
+-- A shield cast or a potion drunk: the bar starts a moment later, once the game has put it on you
 function BarrierCast(spellID, name)
-	local id = name and barrierNames[name]
-	if not id then return false end
-	C_Timer.After(0.2, function() BarrierStart(spellID, name) end)
+	local shield = shieldById[spellID] or name and shieldByName[name]
+	if not shield or shield.potion and not ns.db.barrier.potions then return false end
+	C_Timer.After(0.2, function() BarrierStart(spellID, name, shield) end)
 	return true
+end
+
+-- A shield the addon didn't see go on (a priest's): which one, when the game shows your buffs.
+-- false: only a potion you chose to leave out
+local function Identify()
+	if AurasHidden() or not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return end
+	for i = 1, 40 do
+		local aura = C_UnitAuras.GetAuraDataByIndex("player", i, "HELPFUL")
+		if not aura or ns.IsSecret(aura) or ns.IsSecret(aura.name) or ns.IsSecret(aura.spellId) then return end
+		local shield = shieldById[aura.spellId] or shieldByName[aura.name]
+		if shield and shield.potion and not ns.db.barrier.potions then return false end
+		if shield then
+			current = shield
+			barrier.icon:SetTexture(ns.SpellIcon(aura.spellId or shield.ids[1]))
+			local expires = aura.expirationTime
+			if type(expires) == "number" and not ns.IsSecret(expires) and expires > 0 then
+				barrierEnds = expires
+			end
+			Paint()
+			return shield
+		end
+	end
 end
 
 function ns.StyleBarrier()
@@ -971,7 +1149,7 @@ function ns.StyleBarrier()
 	barrier.tagEdge:SetPoint("TOPLEFT", -px, px)
 	barrier.tagEdge:SetPoint("BOTTOMRIGHT", px, -px)
 	barrier.tag:SetShown(o.icon)
-	barrier.status:SetStatusBarColor(o.color.r, o.color.g, o.color.b)
+	Paint()
 	local size = max(floor(o.height * 0.9), 10)
 	ThinFont(barrier.text, size)
 	ThinFont(barrier.time, size)
@@ -1000,8 +1178,16 @@ function ns.UpdateBarrier()
 			on, barrierEnds = false, 0
 		elseif o.enabled and ns.IsMage() then
 			if now >= barrierEnds then
-				barrierFull, barrierEnds = amount, now + BARRIER_TIME
+				current = nil
+				if Identify() == false then
+					barrier:Hide()
+					return
+				end
+				-- The time its buff gives, else a minute
+				if barrierEnds <= now then barrierEnds = now + BARRIER_TIME end
+				barrierFull = amount
 				barrier.status:SetMinMaxValues(0, amount)
+				Paint()
 			elseif not ns.IsSecret(barrierFull) and barrierFull and amount > barrierFull then
 				barrierFull = amount
 				barrier.status:SetMinMaxValues(0, amount)
@@ -1015,7 +1201,9 @@ function ns.UpdateBarrier()
 	end
 	barrier.status:SetValue(amount)
 	if o.text then barrier.text:SetFormattedText("%d", amount) else barrier.text:SetText("") end
-	barrier.time:SetText(o.time and format("%d", ceil(barrierEnds - now)) or "")
+	-- A potion's two minutes as 2:00, the rest in seconds
+	local left = ceil(barrierEnds - now)
+	barrier.time:SetText(o.time and (left >= 100 and Clock(left) or format("%d", left)) or "")
 	barrier:Show()
 end
 
@@ -1064,6 +1252,15 @@ function food:placeDefault()
 	return true
 end
 
+-- Gathering.lua says when your tracking changes or you go in or out of an instance, and
+-- Reagents.lua when your bags or spells change
+function ns.GatherChanged()
+	if db then ns.UpdateBuffs() end
+end
+ns.ReagentsChanged = ns.GatherChanged
+ns.GroupBuffsChanged = ns.GatherChanged
+ns.RepairChanged = ns.GatherChanged
+
 local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_LOGIN")
 events:SetScript("OnEvent", function(self, event, unit, _, spellID)
@@ -1076,7 +1273,7 @@ events:SetScript("OnEvent", function(self, event, unit, _, spellID)
 		ns.Movable(row, "buffs", { "CENTER", "CENTER", 0, 160 }, L.BUFFS_NAME)
 		ns.Movable(food, "food", { "CENTER", "CENTER", 0, 125 }, L.FOOD_NAME)
 		LearnBarriers()
-		barrier.icon:SetTexture(ns.SpellIcon(BARRIERS[1]))
+		barrier.icon:SetTexture(ns.SpellIcon(SHIELDS[1].ids[1]))
 		ns.StyleBarrier()
 		ns.Movable(barrier, "barrier", { "CENTER", "CENTER", 0, -95 }, L.BARRIER_NAME)
 		table.insert(ns.refreshers, function() ns.StyleBarrier() ns.UpdateBuffs() end)
@@ -1122,6 +1319,7 @@ events:SetScript("OnEvent", function(self, event, unit, _, spellID)
 		inCombat = true
 		-- Before the game locks its buttons for the fight
 		menu:Hide()
+		armorMenu:Hide()
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		inCombat = false
 		Scan()

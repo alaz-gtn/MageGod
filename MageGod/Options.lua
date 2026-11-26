@@ -573,6 +573,24 @@ local function Build()
 	y = Check(page, y, L.OPT_GEMS_ON, function() return gems.enabled end, function(v) gems.enabled = v Buffs() end,
 		SpellIcon(ns.GEMS[1].spell))
 	y = Check(page, y, L.OPT_GEMS_ALL, function() return gems.all end, function(v) gems.all = v Buffs() end)
+	y = Section(page, y, L.SEC_GROUP)
+	y = Check(page, y, format(L.OPT_GROUP_BUFFS, SpellName(1459) or "Arcane Intellect"),
+		function() return db.groupBuffs.enabled end, function(v) db.groupBuffs.enabled = v ns.RefreshGroupBuffs() Buffs() end,
+		SpellIcon(23028))
+	y = Check(page, y, L.OPT_REPAIR, function() return db.repair.enabled end,
+		function(v) db.repair.enabled = v ns.RefreshRepair() Buffs() end, "Interface\\Icons\\Trade_BlackSmithing")
+	y = Slider(page, y, L.OPT_REPAIR_LOW, 5, 75, 5, function() return db.repair.low end,
+		function(v) db.repair.low = v ns.RefreshRepair() Buffs() end)
+	y = Slider(page, y, L.OPT_REPAIR_BAGS, 0, 10, 1, function() return db.repair.bags end,
+		function(v) db.repair.bags = v ns.RefreshRepair() Buffs() end)
+	y = Section(page, y, L.SEC_REAGENTS)
+	y = Check(page, y, format(L.OPT_REAGENTS, SpellName(1225503) or "Reagent Economy"),
+		function() return db.reagents.enabled end, function(v) db.reagents.enabled = v ns.RefreshReagents() Buffs() end,
+		ns.ItemIcon(17031))
+	y = Section(page, y, L.SEC_GATHER)
+	y = Check(page, y, format(L.OPT_GATHER, SpellName(2383) or "Find Herbs", SpellName(2580) or "Find Minerals"),
+		function() return db.gather.enabled end, function(v) db.gather.enabled = v Buffs() end,
+		SpellIcon(2580, "Interface\\Icons\\Spell_Nature_Earthquake"))
 	y = Section(page, y, L.SEC_FOOD)
 	y = Check(page, y, L.OPT_FOOD_ON, function() return db.food.enabled end, function(v) db.food.enabled = v Buffs() end,
 		SpellIcon(19705))
@@ -603,7 +621,11 @@ local function Build()
 		ns.UpdateBarrier()
 	end
 	y = Section(page, y, L.SEC_BARRIER)
-	y = Check(page, y, format(L.OPT_BARRIER, SpellName(11426) or "Ice Barrier", SpellName(1463) or "Mana Shield"),
+	local shieldNames = {}
+	for i, fallback in ipairs({ "Ice Barrier", "Mana Shield", "Fire Ward", "Frost Ward" }) do
+		shieldNames[i] = SpellName(ns.SHIELDS[i].ids[1]) or fallback
+	end
+	y = Check(page, y, format(L.OPT_BARRIER, unpack(shieldNames)),
 		function() return barrier.enabled end, function(v) barrier.enabled = v BarrierChanged() end, SpellIcon(11426))
 	y = Slider(page, y, L.OPT_BARRIER_WIDTH, 60, 400, 5, function() return barrier.width end,
 		function(v) barrier.width = v BarrierChanged() end)
@@ -612,17 +634,36 @@ local function Build()
 	y = Check(page, y, L.OPT_BARRIER_TEXT, function() return barrier.text end, function(v) barrier.text = v BarrierChanged() end)
 	y = Check(page, y, L.OPT_BARRIER_TIME, function() return barrier.time end, function(v) barrier.time = v BarrierChanged() end)
 	y = Check(page, y, L.OPT_BARRIER_ICON, function() return barrier.icon end, function(v) barrier.icon = v BarrierChanged() end)
-	y = Swatch(page, y, L.OPT_BARRIER_COLOR, barrier.color, BarrierChanged)
+	-- A colour for each of your shields: Ice Barrier's is the bar's own
+	y = Swatch(page, y, format(L.OPT_SHIELD_COLOR, shieldNames[1]), barrier.color, BarrierChanged)
+	for i = 2, 4 do
+		y = Swatch(page, y, format(L.OPT_SHIELD_COLOR, shieldNames[i]), barrier.colors[ns.SHIELDS[i].key], BarrierChanged)
+	end
+	y = Check(page, y, L.OPT_BARRIER_POTIONS, function() return barrier.potions end,
+		function(v) barrier.potions = v BarrierChanged() end, SpellIcon(17543, "Interface\\Icons\\INV_Potion_24"))
 	local barrierHint = Text(page, "GameFontHighlightSmall", MUTED)
 	barrierHint:SetPoint("TOPLEFT", 10, y - 6)
 	barrierHint:SetWidth(PAGE_WIDTH - 20)
 	barrierHint:SetText(L.BARRIER_HINT)
-	y = y - 30
+	y = y - 16 - ceil(barrierHint:GetStringHeight() or 30)
 	local mana = db.mana
 	local function ManaChanged()
 		ns.StyleMana()
 		ns.UpdateMana()
 	end
+	local wand = db.wand
+	local function WandChanged() ns.StyleWand() end
+	y = Section(page, y, L.SEC_WAND)
+	y = Check(page, y, L.OPT_WAND, function() return wand.enabled end, function(v) wand.enabled = v WandChanged() end,
+		"Interface\\Icons\\INV_Wand_07")
+	y = Slider(page, y, L.OPT_WAND_WIDTH, 60, 400, 5, function() return wand.width end,
+		function(v) wand.width = v WandChanged() end)
+	y = Slider(page, y, L.OPT_WAND_HEIGHT, 6, 30, 1, function() return wand.height end,
+		function(v) wand.height = v WandChanged() end)
+	y = Check(page, y, L.OPT_WAND_TIME, function() return wand.time end, function(v) wand.time = v WandChanged() end)
+	y = Check(page, y, L.OPT_WAND_ICON, function() return wand.icon end, function(v) wand.icon = v WandChanged() end)
+	y = Swatch(page, y, L.OPT_WAND_COLOR, wand.color, WandChanged)
+	y = Action(page, y, L.OPT_WAND_TEST, L.TRY, ns.TestWand)
 	y = Section(page, y, L.SEC_MANA)
 	y = Check(page, y, L.OPT_MANA, function() return mana.enabled end, function(v) mana.enabled = v ManaChanged() end,
 		SpellIcon(1459))
@@ -721,6 +762,50 @@ local function Build()
 	missilesHint:SetWidth(PAGE_WIDTH - 20)
 	missilesHint:SetText(L.MISSILES_HINT)
 	y = y - 16 - ceil(missilesHint:GetStringHeight() or 40)
+	-- Clearcasting, Heating Up and Fingers of Frost: one switch, colour and try each, then how
+	-- they all look
+	local procs = db.procs
+	local function ProcsChanged(key)
+		ns.StyleProcs()
+		ns.PeekProcs(key)
+	end
+	for _, p in ipairs({ { "clearcasting", L.OPT_PROC_CLEARCASTING }, { "heating", L.OPT_PROC_HEATING },
+		{ "fingers", L.OPT_PROC_FINGERS } }) do
+		local key, text = p[1], p[2]
+		local effect
+		for _, e in ipairs(ns.PROC_EFFECTS) do
+			if e.key == key then effect = e end
+		end
+		local name = ns.ProcName(key)
+		local talent = SpellName(effect.talents[1]) or name
+		y = Section(page, y, name)
+		y = Check(page, y, format(text, name, talent), function() return procs[key].enabled end,
+			function(v) procs[key].enabled = v ProcsChanged(key) end, SpellIcon(effect.spells[1]))
+		y = Swatch(page, y, L.OPT_PROC_COLOR, procs[key].color, function() ProcsChanged(key) end)
+		y = Action(page, y, L.OPT_PROC_TEST, L.TRY, function() ns.TestProcs(key) end)
+	end
+	y = Section(page, y, L.SEC_PROCS_LOOK)
+	y = Slider(page, y, L.OPT_PROCS_SIZE, 20, 200, 5, function() return procs.size end,
+		function(v) ns.SetProcsSize(v) ns.PeekProcs() end)
+	y = Slider(page, y, L.OPT_PROCS_X, -600, 600, 5, function() return (ns.ProcsOffset()) end,
+		function(v) ns.MoveProcs(v, select(2, ns.ProcsOffset())) ns.PeekProcs() end)
+	y = Slider(page, y, L.OPT_PROCS_Y, -400, 400, 5, function() return select(2, ns.ProcsOffset()) end,
+		function(v) ns.MoveProcs((ns.ProcsOffset()), v) ns.PeekProcs() end)
+	y = Slider(page, y, L.OPT_PROCS_GAP, 40, 400, 5, function() return procs.gap end,
+		function(v) procs.gap = v ProcsChanged() end)
+	y = Slider(page, y, L.OPT_PROCS_ALPHA, 10, 100, 5, function() return procs.alpha end,
+		function(v) procs.alpha = v ProcsChanged() end)
+	y = Slider(page, y, L.OPT_PROCS_CALM, 0, 100, 5, function() return procs.calm end,
+		function(v) procs.calm = v ProcsChanged() end)
+	y = Check(page, y, L.OPT_PROCS_TIMER, function() return procs.timer end,
+		function(v) procs.timer = v ProcsChanged() end)
+	y = Slider(page, y, L.OPT_PROCS_TIMER_SIZE, 12, 40, 1, function() return procs.timerSize end,
+		function(v) procs.timerSize = v ProcsChanged() end)
+	local procsHint = Text(page, "GameFontHighlightSmall", MUTED)
+	procsHint:SetPoint("TOPLEFT", 10, y - 6)
+	procsHint:SetWidth(PAGE_WIDTH - 20)
+	procsHint:SetText(L.PROCS_HINT)
+	y = y - 16 - ceil(procsHint:GetStringHeight() or 40)
 	local pulse = db.pulse
 	local function PulseChanged()
 		ns.StylePulse()
@@ -736,6 +821,18 @@ local function Build()
 		function(v) pulse.alpha = v PulseChanged() end)
 	y = Swatch(page, y, L.OPT_PULSE_COLOR, pulse.color, PulseChanged)
 	y = Action(page, y, L.OPT_MISSILES_TEST, L.TRY, ns.PulseBlink)
+	y = Check(page, y, format(L.OPT_KICK, SpellName(2139) or "Counterspell"), function() return db.kick.enabled end,
+		function(v) db.kick.enabled = v ns.UpdateKick() end, SpellIcon(2139))
+	y = Check(page, y, format(L.OPT_DEBUFFS, SpellName(22959) or "Fire Vulnerability", SpellName(12579) or "Winter's Chill"),
+		function() return db.debuffs.enabled end, function(v) db.debuffs.enabled = v ns.RefreshAll() end, SpellIcon(12579))
+	-- The other big cooldowns, each with its switch
+	for i, t in ipairs(ns.PULSE_SPELLS) do
+		if i > 1 then
+			local name = SpellName(t.ids[1]) or t.key
+			y = Check(page, y, format(L.OPT_PULSE_ALSO, name), function() return pulse.spells[t.key] ~= false end,
+				function(v) pulse.spells[t.key] = v end, SpellIcon(t.ids[1]))
+		end
+	end
 	local pulseHint = Text(page, "GameFontHighlightSmall", MUTED)
 	pulseHint:SetPoint("TOPLEFT", 10, y - 6)
 	pulseHint:SetWidth(PAGE_WIDTH - 20)

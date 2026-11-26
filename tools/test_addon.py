@@ -19,7 +19,7 @@ lua.globals().LOCALE = LOCALE
 
 lua.execute(r'''
 print = function(...) local t = {} for i = 1, select("#", ...) do t[#t+1] = tostring((select(i, ...))) end py_print(table.concat(t, " ")) end
-format = string.format; strlower = string.lower; max = math.max; min = math.min; abs = math.abs; floor = math.floor; ceil = math.ceil
+format = string.format; strlower = string.lower; strupper = string.upper; max = math.max; min = math.min; abs = math.abs; floor = math.floor; ceil = math.ceil
 strtrim = function(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end
 wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
 GetLocale = function() return LOCALE end
@@ -42,6 +42,15 @@ SPELLS = {
   [116] = "Frostbolt", [133] = "Fireball", [5143] = "Arcane Missiles",
   [11426] = "Ice Barrier", [13033] = "Ice Barrier", [1463] = "Mana Shield",
   [1953] = "Blink", [1296017] = "Comprehend Scroll",
+  [2383] = "Find Herbs", [2580] = "Find Minerals",
+  [11213] = "Arcane Concentration", [12536] = "Clearcasting",
+  [543] = "Fire Ward", [10225] = "Fire Ward", [6143] = "Frost Ward", [28609] = "Frost Ward",
+  [3561] = "Teleport: Stormwind", [3562] = "Teleport: Ironforge", [10059] = "Portal: Stormwind",
+  [1225503] = "Reagent Economy", [130] = "Slow Fall",
+  [10193] = "Mana Shield", [17] = "Power Word: Shield", [10901] = "Power Word: Shield",
+  [7233] = "Fire Protection", [17543] = "Fire Protection", [17548] = "Shadow Protection",
+  [400624] = "Heating Up", [400625] = "Heating Up",
+  [400647] = "Fingers of Frost", [400669] = "Fingers of Frost", [400670] = "Fingers of Frost",
   [400588] = "Missile Barrage", [400589] = "Missile Barrage", [401736] = "Missile Barrage", [467409] = "Missile Barrage",
 }
 -- How far each spell reaches
@@ -80,7 +89,11 @@ end
 time = function() return G.epoch end
 -- Weapons by item: their subclass (staff 10, dagger 15)
 WEAPONS = { [900] = 10, [901] = 15 }
-GetInventoryItemID = function(_, slot) if slot == 16 then return G.mainHand end end
+GetInventoryItemID = function(_, slot) if slot == 16 then return G.mainHand end if slot == 18 then return G.wand end end
+GetInventoryItemDurability = function(slot) if slot == 5 and G.durability then return G.durability, 100 end end
+CanMerchantRepair = function() return G.repairs end
+GetInventoryItemTexture = function(_, slot) if slot == 18 and G.wand then return 135463 end end
+UnitRangedDamage = function() return G.wandSpeed or 1.5 end
 GetWeaponEnchantInfo = function() return G.weaponEnchant end
 FAMILIAR_SPELLS = { [275069] = "Rat Familiar", [277483] = "Frog Familiar", [277493] = "Cat Familiar" }
 -- Food in the bags: by bag, { itemID, count }; what each one's tooltip says
@@ -97,6 +110,7 @@ FOOD_TIPS = {
   [704] = "Use: Restores 294 health over 21 sec. If you spend at least 10 sec eating, you will become well fed and gain 6 Stamina and Spirit for 15 min.",
 }
 C_Container = {
+  GetContainerNumFreeSlots = function(bag) if bag == 0 then return G.freeSlots or 10, 0 end return 0, 0 end,
   GetContainerNumSlots = function(bag) return G.bags[bag] and #G.bags[bag] or 0 end,
   GetContainerItemInfo = function(bag, slot) local it = G.bags[bag] and G.bags[bag][slot] if it then return { itemID = it[1], stackCount = it[2], itemName = it[3] } end end,
 }
@@ -148,9 +162,22 @@ end
 C_NamePlate = { GetNamePlateForUnit = function() return G.plate end }
 UnitExists = function(u) if u == "target" then return G.target ~= nil end return true end
 UnitCanAttack = function() return G.target and G.target.hostile end
+UnitCastingInfo = function(u) if u == "target" and G.casting then return G.casting, "", 1, 0, 0, false, nil, G.uninterruptible end end
+UnitChannelInfo = function() end
 UnitIsDead = function() return false end
 UnitIsDeadOrGhost = function() return G.dead end
-UnitOnTaxi = function() return false end
+UnitOnTaxi = function() return G.taxi end
+IsInInstance = function() return G.instance, G.instance and "party" or "none" end
+-- What the merchant you talk to sells
+G.merchant = {}
+GetMerchantNumItems = function() return #G.merchant end
+GetMerchantItemID = function(i) return G.merchant[i] end
+-- The minimap's tracking list: { name, spellID, active, type }
+G.tracking = {}
+C_Minimap = {
+  GetNumTrackingTypes = function() return #G.tracking end,
+  GetTrackingInfo = function(i) return G.tracking[i] end,
+}
 UnitAffectingCombat = function() return G.combat end
 InCombatLockdown = function() return G.combat end
 CheckInteractDistance = function(_, i) if G.secretRange then return SECRET end return G.dist <= (i == 3 and 8 or 28) end
@@ -243,6 +270,8 @@ function CreateFrame(kind, name, parent, template)
   function f:GetAttribute(k) return self.attrs[k] end
   function f:GetLeft() return 300 end
   function f:GetBottom() return 500 end
+  function f:GetRight() return 336 end
+  function f:GetTop() return 536 end
   function f:SetScale(s) self.scale = s end
   function f:Play() self.playing = true end
   function f:Stop() self.playing = false end
@@ -503,7 +532,18 @@ check(casters() == [("spell", "Arcane Intellect", "player")],
 check(G.Same(cast.parent, G.UIParent) and cast.point[3] == "BOTTOMLEFT" and cast.point[4] == 300,
       "the buttons sit over the icons, but apart from them")
 auras(Arcane_Intellect=(1900, 3600), Well_Fed=(800, 900))
-check(casters() == [("spell", "Mage Armor", "player")], f"and the armor one: {casters()}")
+check(casters() == [(None, "Mage Armor", "player")], f"Ice and Mage Armor known: the armor one doesn't cast, it opens a choice: {casters()}")
+acaster = [b for b in G.ShownIcons(cast).values()][0]
+amenu, arows = ns.ArmorMenu()
+acaster.hooks.OnClick(acaster, "LeftButton", False)
+check(amenu.shown and [(r.attrs.type, r.attrs.spell, r.attrs.unit) for r in arows.values() if r.shown]
+      == [("spell", "Ice Armor", "player"), ("spell", "Mage Armor", "player")],
+      "a click: your armors as bars, each puts that one on you")
+arows[2].hooks.OnClick(arows[2], "LeftButton", False)
+check(not amenu.shown, "picking one closes the list")
+know(6117, on=False)
+check(casters() == [("spell", "Ice Armor", "player")], f"only one armor known: the click casts it straight away: {casters()}")
+know(6117)
 G.Fire("PLAYER_REGEN_DISABLED")  # the game says so before it locks the buttons
 check(not cast.shown and icons() == [], "a fight starts: the buttons go, and the reminders with them")
 S.combat = True
@@ -781,6 +821,54 @@ db.barrier.enabled = True
 S.absorb = 0
 ns.UpdateBarrier()
 
+
+def shield(spell, amount, *aura):
+    S.absorb = amount
+    if aura:
+        auras(**{aura[0]: aura[1]})
+    G.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", spell)
+    G.RunTimers()
+    return [round(v, 2) for v in status.barColor.values()]
+
+
+def tone(key):
+    c = db.barrier.colors[key]
+    return [round(c.r, 2), round(c.g, 2), round(c.b, 2)]
+
+
+got = shield(10225, 913, "Fire_Ward", (30, 30, 10225))
+check(bar.shown and got == tone("fireWard") and bar.time.text == "30" and bar.icon.tex == 10225,
+      f"Fire Ward: the bar in its own orange, its 30 seconds and icon: {got}, {bar.time.text}")
+got = shield(28609, 913, "Frost_Ward", (30, 30, 28609))
+check(got == tone("frostWard") and bar.icon.tex == 28609, f"Frost Ward: its own pale frost: {got}")
+got = shield(10193, 900, "Mana_Shield", (60, 60, 10193))
+check(got == tone("manaShield") and bar.time.text == "60", f"Mana Shield: arcane: {got}")
+got = shield(11426, 800, "Ice_Barrier", (60, 60, 11426))
+check(got == [0.52, 0.78, 0.92], f"Ice Barrier: the bar's own frost: {got}")
+got = shield(17543, 2600, "Fire_Protection", (120, 120, 17543))
+check(got == tone("fire") and bar.time.text == "2:00" and list(status.minmax.values()) == [0, 2600],
+      f"a Greater Fire Protection Potion: in fire's colour, its two minutes as 2:00: {got}, {bar.time.text}")
+got = shield(17548, 2600, "Shadow_Protection", (120, 120, 17548))
+check(got == tone("shadow"), f"each potion in its school's colour: {got}")
+S.absorb = 0
+ns.UpdateBarrier()
+db.barrier.potions = False
+shield(7233, 1300, "Fire_Protection", (120, 120, 7233))
+S.absorb = G.Hidden(1300)
+ns.UpdateBarrier()
+check(not bar.shown, "the potions can be left out")
+db.barrier.potions = True
+S.absorb = 0
+ns.UpdateBarrier()
+auras(Power_Word__Shield=(30, 30, 10901))
+S.absorb = 600
+G.Fire("UNIT_ABSORB_AMOUNT_CHANGED", "player")
+check(bar.shown and [round(v, 2) for v in status.barColor.values()] == tone("powerWord") and bar.icon.tex == 10901,
+      f"a priest's Power Word: Shield, seen out of combat: its own colour and icon: {list(status.barColor.values())}")
+S.absorb = 0
+auras(Mage_Armor=(1800, 1800), Arcane_Intellect=(1900, 3600), Well_Fed=(800, 900), Ice_Barrier=(60, 60))
+ns.UpdateBarrier()
+
 # ---------------------------------------------------------------- The five-second rule
 mana = G.NAMED["MageGodMana"]
 
@@ -1028,7 +1116,9 @@ gems_all.checked = False
 gems_all.scripts.OnClick(gems_all)
 width = controls[L.OPT_BARRIER_WIDTH]
 check(width is not None and controls[L.OPT_CLICK] is not None, "the barrier's width and the click option are there")
-check(controls[L.OPT_BARRIER_ICON] is not None and controls[L.OPT_BARRIER_COLOR] is not None, "and its icon and colour")
+check(controls[L.OPT_BARRIER_ICON] is not None and controls[L.OPT_SHIELD_COLOR % "Ice Barrier"] is not None
+      and controls[L.OPT_SHIELD_COLOR % "Fire Ward"] is not None and controls[L.OPT_BARRIER_POTIONS] is not None,
+      "and its icon, a colour for each shield and the potions")
 check(controls[L.OPT_IMBUE] is not None and controls[L.OPT_FAMILIAR] is not None, "and the scroll ones")
 ticks = controls[L.OPT_MANA_TICKS]
 ticks.checked = False
@@ -1211,6 +1301,135 @@ check(spot.shown, "moving the displays shows the sample to drag")
 ns.SetUnlocked(False)
 check(not spot.shown, "locked: hidden again")
 
+# ---------------------------------------------------------------- Clearcasting, Heating Up and Fingers of Frost
+KEYS = ("clearcasting", "heating", "fingers")
+
+
+def pst(key):
+    return ns.ProcsState(key)
+
+
+def files_of(art):
+    return [e[1].tex for e in art.tinted.values()]
+
+
+def xs_of(art):
+    return sorted({round(e[1].points[1][4]) for e in art.placed.values()})
+
+
+before = len(boxes())
+check(all(pst(k).container is None for k in KEYS), "no talent for any of them: nothing watched")
+know(11213)  # Arcane Concentration
+cc = pst("clearcasting")
+check(cc.container is not None and len(boxes()) == before + 1 and watched(cc.container) == [12536],
+      "Arcane Concentration learnt: a container watching Clearcasting's buff")
+check(cc.container.slot.filter == "HELPFUL" and cc.container.unit == "player" and cc.container.enabled, "your buffs")
+check(pst("heating").container is None and pst("fingers").container is None, "the others still wait for their talents")
+art = cc.dressed
+button = cc.container.button
+check(art.ready and len(button.shownAnims) == 2 and len(button.assignedAnims) == 4,
+      "Clearcasting: the circle turning and breathing while it lasts; it lands, spins, glows and flashes as it comes")
+files = files_of(art)
+check(files.count(MEDIA + "ring_glow") == 2 and files.count(MEDIA + "ring_core") == 2 and files.count(MEDIA + "ring_base") == 2,
+      f"a circle on the ground, calm and burst: {files}")
+check(art.calm.alpha == 0.2 and art.strike.alpha == 0.6, "small and see-through by default: 60% as it procs, 20% while it lasts")
+tpoint = list(art.timer.points[1].values())
+check(tpoint[0] == "CENTER" and tpoint[2:] == ["CENTER", 0, -150] and art.timer.font[2] == 16,
+      f"its seconds inside the circle, a little smaller: {tpoint}, {art.timer.font[2]}")
+cs = [round(e[1].color[1], 2) for e in art.tinted.values()][:1]
+check(cs == [0.72], f"arcane lilac: {cs}")
+check(cc.holder.scale == 0.4, "at 40%")
+
+know(400624)  # Heating Up
+hu = pst("heating")
+art = hu.dressed
+check(hu.container is not None and watched(hu.container) == [400625], "Heating Up learnt: its buff watched, not the talent")
+check(len(hu.container.button.shownAnims) == 3 and len(hu.container.button.assignedAnims) == 3,
+      "embers: each column rising and their glow breathing; a flare as it comes")
+files = files_of(art)
+check(files.count(MEDIA + "ember_glow") == 4 and files.count(MEDIA + "ember_core") == 4, f"two columns of embers: {files}")
+check(xs_of(art) == [-120, 120], f"one on each side of you: {xs_of(art)}")
+
+know(400647)  # Fingers of Frost
+ff = pst("fingers")
+art = ff.dressed
+check(ff.container is not None and watched(ff.container) == [400669, 400670], "Fingers of Frost: both its buffs")
+files = files_of(art)
+check(files.count(MEDIA + "frost_glow") == 4 and files.count(MEDIA + "frost_core") == 4, f"a snowflake by each hand: {files}")
+check(xs_of(art) == [-66, 66], f"closer in than the embers: {xs_of(art)}")
+check(len(ff.container.button.shownAnims) == 3 and len(ff.container.button.assignedAnims) == 3, "turning, and flying in as it comes")
+
+# Another number for the same buff, seen out of combat, joins the list
+auras(Clearcasting=(10, 15, 999101))
+check(watched(pst("clearcasting").container) == [12536, 999101] and db.procs.learned[999101] == "clearcasting",
+      "a Clearcasting with another number joins it")
+auras()
+
+# A talent unlearnt: its proc stops being watched
+old = pst("fingers").container
+know(400647, on=False)
+check(pst("fingers").container is None and not old.enabled, "Fingers of Frost unlearnt: switched off")
+S.combat = True
+know(400647)
+check(pst("fingers").container is None, "learnt again in a fight: it waits")
+S.combat = False
+G.Fire("PLAYER_REGEN_ENABLED")
+check(pst("fingers").container is not None, "and is built once the fight is over")
+
+# The samples: while moving the displays, only the ones you have the talent for
+know(400624, on=False)
+ns.SetUnlocked(True)
+check(pst("clearcasting").sampleShown and pst("fingers").sampleShown and not pst("heating").sampleShown,
+      "moving the displays: the samples of the procs your talents give, not Heating Up's")
+check(pst("clearcasting").spot.shown and G.NAMED["MageGodProcs"].mover.shown, "with a box to drag")
+ns.SetUnlocked(False)
+check(not pst("clearcasting").sampleShown and not pst("clearcasting").spot.shown, "locked: gone")
+out = slash("procs")
+check(len(out) == 3 and "12536, 999101" in out[0] and L.PROCS_NO_TALENT % ("Heating Up", "Heating Up") == out[1].split("|r ", 1)[-1]
+      and "400669, 400670" in out[2], f"/magegod procs: what each watches, and the one without its talent: {out}")
+check(all(pst(k).sampleShown for k in KEYS), "and shows all three a moment, even without the talent")
+heat = pst("heating")
+heat.spot.scripts.OnUpdate(heat.spot, 0.1)
+check(heat.sample.timer.text == "20", f"Heating Up's sample counts down from 20: {heat.sample.timer.text}")
+S.now = S.now + 6
+G.RunTimers()
+check(not any(pst(k).sampleShown for k in KEYS), "a few seconds later they're gone")
+
+# The options
+ns.ShowOptionsPage("procs")
+pcontrols = {c.setting: c for c in page["procs"].controls.values()}
+name = "Clearcasting"
+check(L.OPT_PROC_CLEARCASTING % ("Clearcasting", "Arcane Concentration") in pcontrols
+      and L.OPT_PROC_HEATING % ("Heating Up", "Heating Up") in pcontrols
+      and L.OPT_PROC_FINGERS % ("Fingers of Frost", "Fingers of Frost") in pcontrols,
+      "a switch for each, saying its talent")
+psize = pcontrols[L.OPT_PROCS_SIZE]
+psize.scripts.OnValueChanged(psize, 100)
+check(db.procs.size == 100 and pst("clearcasting").holder.scale == 1 and pst("clearcasting").spot.scale == 1, "their size")
+pgap = pcontrols[L.OPT_PROCS_GAP]
+pgap.scripts.OnValueChanged(pgap, 200)
+check(xs_of(pst("fingers").dressed) == [-110, 110], f"the space between the sides moves the snowflakes too: {xs_of(pst('fingers').dressed)}")
+px = pcontrols[L.OPT_PROCS_X]
+px.scripts.OnValueChanged(px, 50)
+check(list(db.positions.procs.values()) == ["CENTER", "CENTER", 50, -20], f"left or right: {list(db.positions.procs.values())}")
+check(db.missiles.size != 100 or db.positions.missiles is None or db.positions.missiles[3] != 50,
+      "the lightning keeps its own size and place")
+pcalm = pcontrols[L.OPT_PROCS_CALM]
+pcalm.scripts.OnValueChanged(pcalm, 40)
+check(pst("clearcasting").dressed.calm.alpha == 0.4, "their calm strength")
+on = pcontrols[L.OPT_PROC_CLEARCASTING % ("Clearcasting", "Arcane Concentration")]
+on.checked = False
+on.scripts.OnClick(on)
+check(not db.procs.clearcasting.enabled and not pst("clearcasting").holder.shown, "Clearcasting can be turned off")
+on.checked = True
+on.scripts.OnClick(on)
+check(pst("clearcasting").holder.shown, "and on again")
+win.Hide(win)
+db.procs.size, db.procs.gap, db.procs.calm = 40, 120, 20
+db.positions.procs = None
+ns.StyleProcs()
+know(11213, 400647, on=False)
+
 # ---------------------------------------------------------------- Blink ready: a pulse in the middle
 pst = ns.PulseState()
 pulse_place, part, poller = pst.place, pst.art, pst.poller
@@ -1350,6 +1569,300 @@ blink_on.scripts.OnClick(blink_on)
 check(not db.pulse.enabled, "it can be turned off")
 blink_on.checked = True
 blink_on.scripts.OnClick(blink_on)
+
+# ---------------------------------------------------------------- Reagents running low
+RT = ns.REAGENT_TEXT
+check(db.reagents.enabled, "the reagent reminder is on by default")
+
+
+def reagent_rows():
+    return [r for r in extras() if "17031" in r[0] or "17032" in r[0] or "17056" in r[0]]
+
+
+G.Fire("BAG_UPDATE_DELAYED")
+check(reagent_rows() == [], "no teleports known: no runes to remind")
+know(3561, 3562)
+check(reagent_rows() == [(RT.NONE % "gem 17031", None, None)], f"Teleport known, no runes: says so: {reagent_rows()}")
+S["items"][17031] = 2
+G.Fire("BAG_UPDATE_DELAYED")
+check(reagent_rows() == [(RT.LOW % ("gem 17031", 2), None, None)], f"two left: how many: {reagent_rows()}")
+rrow = [b for b in G.ShownIcons(food).values() if b.text.text == RT.LOW % ("gem 17031", 2)][0]
+check(rrow.item == 17031 and rrow.clickText == RT.FOR % "Teleport: Stormwind, Teleport: Ironforge",
+      f"its tooltip says what spends them: {rrow.clickText}")
+S["items"][17031] = 5
+G.Fire("BAG_UPDATE_DELAYED")
+check(reagent_rows() == [], "five: enough")
+S["items"][17031] = 1
+know(10059)
+check(len(reagent_rows()) == 2, "Portal known too: its runes as well")
+S.known[1225503] = True
+G.Fire("SPELLS_CHANGED")
+check(reagent_rows() == [], "with Reagent Economy no reminder for what vendors sell")
+S.known[1225503] = None
+G.Fire("SPELLS_CHANGED")
+printed.clear()
+S.merchant = lua.table(159, 17031, 17032)
+G.Fire("MERCHANT_SHOW")
+check(len(printed) == 2 and RT.VENDOR % ("gem 17031", 1) in printed[0] and RT.VENDOR % ("gem 17032", 0) in printed[1],
+      f"a merchant that sells them says so in the chat: {list(printed)}")
+S.merchant = lua.table()
+db.reagents.enabled = False
+ns.RefreshReagents()
+check(reagent_rows() == [], "it can be turned off")
+db.reagents.enabled = True
+check("%s" in L.OPT_REAGENTS and L.SEC_REAGENTS, "its option has its words")
+know(3561, 3562, 10059, on=False)
+S["items"][17031] = 0
+G.Fire("BAG_UPDATE_DELAYED")
+check(reagent_rows() == [], "no teleports: gone")
+
+# ---------------------------------------------------------------- The wand's swing timer
+wbar = G.NAMED["MageGodWand"]
+check(db.wand.enabled and not wbar.shown, "the wand bar is on, hidden until you shoot")
+S.wand = 5240
+S.wandSpeed = 1.5
+ns.StyleWand()
+G.Fire("PLAYER_SWING", 1.5, 0)
+check(not wbar.shown, "a melee swing doesn't count")
+G.Fire("PLAYER_SWING", 1.5, 2)
+check(wbar.shown and wbar.time.text == "1.5" and wbar.tag.tex == 135463, f"a wand shot: the bar, its seconds and your wand's icon: {wbar.time.text}")
+S.now = S.now + 0.75
+ns.UpdateWand()
+check(wbar.time.text == "0.8", f"halfway: 0.8 s left ({wbar.time.text})")
+S.now = S.now + 0.75 + 2.1
+ns.UpdateWand()
+check(not wbar.shown, "two seconds after the last shot it goes")
+G.Fire("PLAYER_SWING", G.SECRET, 2)
+check(not wbar.shown, "a hidden duration is left alone")
+# The game says nothing of the wand's shots: Shoot keeps it going at the wand's speed
+st = ns.WandState
+G.Fire("START_AUTOREPEAT_SPELL")
+check(wbar.shown and wbar.time.text == "1.5", f"Shoot on, no word from the game: the bar at your wand's speed: {wbar.time.text}")
+S.now = S.now + 1.6
+ns.UpdateWand()
+check(wbar.shown and float(wbar.time.text) > 1.3, f"and the next shot after it: {wbar.time.text}")
+G.Fire("STOP_AUTOREPEAT_SPELL")
+S.now = S.now + 4
+ns.UpdateWand()
+check(not wbar.shown, "Shoot off: it goes")
+G.Fire("PLAYER_SWING_RANGE_UPDATE", 2, False, True)
+G.Fire("PLAYER_SWING", 1.5, 2)
+check(wbar.shown and abs(wbar.alpha - 0.55) < 1e-6, "your target out of reach: grey and faded")
+G.Fire("PLAYER_SWING_RANGE_UPDATE", 2, True, True)
+db.wand.enabled = False
+ns.UpdateWand()
+check(not wbar.shown, "it can be turned off")
+db.wand.enabled = True
+S.now = S.now + 5
+ns.UpdateWand()
+out = slash("varita" if es else "wand")
+check(wbar.shown, "/magegod wand shows it shooting")
+S.now = S.now + 7
+G.RunTimers()
+check(not wbar.shown, "and it goes after a while")
+S.wand = None
+
+# ---------------------------------------------------------------- Group buffs, gear and bags
+GT, RPT = ns.GROUP_BUFF_TEXT, ns.REPAIR_TEXT
+auras(Mage_Armor=(1800, 1800), Arcane_Intellect=(3600, 3600), Well_Fed=(800, 900))
+base = icons()
+S.group = True
+G.Fire("GROUP_ROSTER_UPDATE")
+check(icons() == base, "in a group where everyone has Arcane Intellect: nothing")
+auras(Mage_Armor=(1800, 1800), Well_Fed=(800, 900))
+G.Fire("UNIT_AURA", "party1")
+gb = list(ns.GroupBuffReminders().values())
+check(len(gb) == 1 and gb[0].count == 4 and gb[0].unit == "party1" and gb[0].text == GT.MISSING % ("Arcane Intellect", 4),
+      f"four party members without it: how many, and the first to cast it on: {[(r.count, r.unit) for r in gb]}")
+check((1459, True, "4") in icons(), f"its icon in the row with the count: {icons()}")
+check(("spell", "Arcane Intellect", "party1") in casters(), f"a click casts it on that member: {casters()}")
+auras(Mage_Armor=(1800, 1800), Arcane_Brilliance=(3600, 3600), Well_Fed=(800, 900))
+G.Fire("UNIT_AURA", "party1")
+check(ns.GroupBuffReminders() == [] or len(list(ns.GroupBuffReminders())) == 0, "Arcane Brilliance counts too")
+S.group = False
+G.Fire("GROUP_ROSTER_UPDATE")
+auras(Mage_Armor=(1800, 1800), Arcane_Intellect=(3600, 3600), Well_Fed=(800, 900))
+check(len(list(ns.GroupBuffReminders())) == 0, "alone: nothing")
+
+def repair_rows():
+    return [r[0] for r in extras() if "%" in r[0] or r[0].startswith(RPT.BAGS.split(":")[0]) or r[0] == RPT.BAGS_FULL]
+
+S.durability = 18
+G.Fire("UPDATE_INVENTORY_DURABILITY")
+check(RPT.WORN % 18 in repair_rows(), f"gear at 18%: a reminder: {repair_rows()}")
+S.durability = 60
+G.Fire("UPDATE_INVENTORY_DURABILITY")
+check(repair_rows() == [], "at 60%: nothing")
+S.freeSlots = 1
+G.Fire("BAG_UPDATE_DELAYED")
+check(RPT.BAGS % 1 in repair_rows(), f"one free slot left: a reminder: {repair_rows()}")
+S.freeSlots = 0
+G.Fire("BAG_UPDATE_DELAYED")
+check(RPT.BAGS_FULL in repair_rows(), "bags full: says so")
+S.freeSlots = 10
+G.Fire("BAG_UPDATE_DELAYED")
+printed.clear()
+S.repairs = True
+G.Fire("MERCHANT_SHOW")
+check(len(printed) == 1 and RPT.VENDOR % 60 in printed[0], f"a vendor who repairs says how worn your gear is: {list(printed)}")
+S.repairs = False
+S.durability = None
+db.repair.enabled = False
+ns.RefreshRepair()
+check(repair_rows() == [], "it can be turned off")
+db.repair.enabled = True
+
+# ---------------------------------------------------------------- Herbalism or Mining: their tracking
+check(db.gather.enabled, "the gathering tracking reminder is on by default")
+auras(Mage_Armor=(1800, 1800), Arcane_Intellect=(3600, 3600), Well_Fed=(800, 900))
+base = icons()
+G.Fire("MINIMAP_UPDATE_TRACKING")
+check(icons() == base and ns.GatherReminder() is None, "no gathering profession: no tracking reminder")
+
+
+def tracking(*rows):
+    S.tracking = lua.table(*[lua.table(name=n, spellID=i, active=a, type="spell") for n, i, a in rows])
+    G.Fire("MINIMAP_UPDATE_TRACKING")
+
+
+tracking(("Find Herbs", 2383, False))
+know(2383)
+check(icons() == base + [(2383, True, "")], f"a herbalist without Find Herbs on: its icon in the row, grey: {icons()}")
+check(("spell", "Find Herbs", "player") in casters(), f"a click turns it on: {casters()}")
+tracking(("Find Herbs", 2383, True))
+check(icons() == base and db.gather.last == "herbs", "Find Herbs on: gone, and it remembers it was herbs")
+know(2580)
+tracking(("Find Herbs", 2383, False), ("Find Minerals", 2580, True))
+check(icons() == base and db.gather.last == "minerals", "herbalist and miner: Find Minerals on counts too")
+tracking(("Find Herbs", 2383, False), ("Find Minerals", 2580, False))
+check(icons() == base + [(2580, True, "")], f"both off: the one you had on last, Find Minerals: {icons()}")
+check(("spell", "Find Minerals", "player") in casters(), "and its click")
+db.gather.last = None
+ns.UpdateBuffs()
+check(icons() == base + [(2383, True, "")], "nothing remembered: the first you know, Find Herbs")
+S.instance = True
+G.Fire("PLAYER_ENTERING_WORLD")
+check(icons() == base, "in a dungeon, raid or battleground: no reminder")
+S.instance = False
+S.taxi = True
+ns.UpdateBuffs()
+check((2383, True, "") not in icons(), "nor on a flight")
+S.taxi = False
+S.combat = True
+G.Fire("PLAYER_REGEN_DISABLED")
+check((2383, True, "") not in icons(), "nor in a fight")
+S.combat = False
+G.Fire("PLAYER_REGEN_ENABLED")
+check(icons() == base + [(2383, True, "")], "back after it")
+S.tracking[1].active = G.SECRET
+G.Fire("MINIMAP_UPDATE_TRACKING")
+check(icons() == base, "the game hides the tracking list: no guessing")
+tracking(("Find Herbs", 2383, False))
+know(2383, 2580, on=False)
+check(icons() == base + [(2383, True, "")], "known through the tracking list when the spellbook doesn't say")
+minimap = G.C_Minimap
+G.C_Minimap = None
+ns.UpdateBuffs()
+check(icons() == base, "no tracking list in the game: nothing")
+G.C_Minimap = minimap
+db.gather.enabled = False
+ns.UpdateBuffs()
+check(icons() == base, "it can be turned off")
+db.gather.enabled = True
+check("%s" in L.OPT_GATHER and L.SEC_GATHER, "its option has its words")
+tracking()
+check(icons() == base, "no gathering profession left: gone")
+
+# ---------------------------------------------------------------- Other big cooldowns back
+pst = ns.PulseState()
+ppl = pst.place
+S.now = S.now + 10
+pst.place.scripts.OnUpdate(pst.place, 0.1)
+know(12051)  # Evocation
+G.COOLDOWNS[12051] = lua.table(isActive=True, duration=480)
+G.Fire("SPELL_UPDATE_COOLDOWN")
+check(ns.PulseState().states.evocation.since is not None, "Evocation cooling down: watched")
+G.COOLDOWNS[12051] = lua.table(isActive=False, duration=0)
+G.Fire("SPELL_UPDATE_COOLDOWN")
+check(ppl.shown and pst.art.icon.tex == 12051, f"Evocation back: its icon pulses in the middle ({pst.art.icon.tex})")
+know(12472)  # Cold Snap, back while Evocation's pulse plays
+G.COOLDOWNS[12472] = lua.table(isActive=True, duration=600)
+G.Fire("SPELL_UPDATE_COOLDOWN")
+G.COOLDOWNS[12472] = lua.table(isActive=False, duration=0)
+G.Fire("SPELL_UPDATE_COOLDOWN")
+check(pst.art.icon.tex == 12051 and len(list(ns.PulseState().queue.values())) == 1, "two at once: the second waits its turn")
+S.now = S.now + 1.2
+pst.place.scripts.OnUpdate(pst.place, 0.1)
+check(pst.art.icon.tex == 12472, "and pulses right after")
+S.now = S.now + 1.2
+pst.place.scripts.OnUpdate(pst.place, 0.1)
+db.pulse.spells.evocation = False
+G.COOLDOWNS[12051] = lua.table(isActive=True, duration=480)
+G.Fire("SPELL_UPDATE_COOLDOWN")
+G.COOLDOWNS[12051] = lua.table(isActive=False, duration=0)
+G.Fire("SPELL_UPDATE_COOLDOWN")
+check(not ppl.shown, "each one can be turned off")
+db.pulse.spells.evocation = True
+know(12051, 12472, on=False)
+
+# ---------------------------------------------------------------- Counterspell ready
+kick = ns.KickFrame()
+S.target = lua.table(hostile=True)
+S.dist = 20
+know(2139)
+G.Fire("PLAYER_TARGET_CHANGED")
+check(not kick.shown, "Counterspell known, the target not casting: nothing")
+S.casting = "Fireball"
+G.Fire("UNIT_SPELLCAST_START", "target")
+check(kick.shown and kick.icon.tex == 2139, "the target casts and Counterspell is ready: its icon")
+S.casting = G.SECRET
+G.Fire("UNIT_SPELLCAST_START", "target")
+check(kick.shown, "a cast the game hides still counts")
+S.casting = "Fireball"
+G.COOLDOWNS[2139] = lua.table(isActive=True, duration=24)
+G.Fire("SPELL_UPDATE_COOLDOWN")
+check(not kick.shown, "Counterspell cooling down: nothing")
+G.COOLDOWNS[2139] = None
+S.uninterruptible = True
+G.Fire("UNIT_SPELLCAST_START", "target")
+check(not kick.shown, "a cast that can't be cut: nothing")
+S.uninterruptible = None
+S.casting = None
+G.Fire("UNIT_SPELLCAST_STOP", "target")
+check(not kick.shown, "the cast over: gone")
+db.kick.enabled = False
+S.casting = "Fireball"
+ns.UpdateKick()
+check(not kick.shown, "it can be turned off")
+db.kick.enabled = True
+S.casting = None
+ns.UpdateKick()
+know(2139, on=False)
+S.target = None
+
+# ---------------------------------------------------------------- Your debuffs on the target
+dst = ns.DebuffsState()
+deb = {d.key: d for d in dst.debuffs.values()}
+check(deb["scorch"].container is None and deb["chill"].container is None, "no talents: nothing watched on the target")
+know(11095)  # Improved Scorch
+c = deb["scorch"].container
+check(c is not None and c.slot.filter == "HARMFUL" and c.unit == "target" and c.enabled
+      and sorted(c.slot.options.candidateFilters.includeSpellIDs.keys()) == [22959],
+      "Improved Scorch learnt: Fire Vulnerability watched on your target")
+check(deb["scorch"].box.dressed, "its icon dressed by the game, with stacks and countdown")
+check(deb["chill"].container is None, "Winter's Chill waits for its talent")
+S.plate = G.CreateFrame("Frame")
+G.Fire("PLAYER_TARGET_CHANGED")
+check(dst.holder.shown, "beside the target's nameplate")
+S.plate = None
+G.Fire("PLAYER_TARGET_CHANGED")
+check(not dst.holder.shown, "no nameplate: hidden")
+db.debuffs.enabled = False
+ns.RefreshAll()
+check(not c.enabled, "it can be turned off")
+db.debuffs.enabled = True
+ns.RefreshAll()
+know(11095, on=False)
 
 # ---------------------------------------------------------------- Not a mage
 S["class"] = "WARRIOR"
