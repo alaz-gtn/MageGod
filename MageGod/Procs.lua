@@ -21,7 +21,9 @@ local SIDE_WIDTH = 110 -- room for a column of embers and its glow
 local RING_Y = -150 -- Clearcasting's circle, on the ground at your feet
 local EMBER_TIMER_Y = -200 -- Heating Up's seconds, under the circle
 local FLAKE_Y = -30 -- the snowflakes, by your hands
-local FLAKE_K = 0.55 -- and how far out, as a part of the space between the sides
+-- Small drawings fade away at the calm's strength the big ones have: these get more of it
+local CALM_BOOST = { fingers = 2 }
+local FLAKE_K = 0.85 -- and how far out, as a part of the space between the sides: clear of your body
 local FROST_TIMER_Y = 120 -- Fingers of Frost's seconds, over your head
 local RISE = { 1.5, 1.7 } -- one round of each column's embers while it lasts: apart, so they don't move as one
 local FLARE = 0.5 -- one round of the embers as it comes: three, the last one fading out
@@ -101,7 +103,7 @@ local function Fit(art)
 		pcall(texture.ClearAllPoints, texture)
 		pcall(texture.SetPoint, texture, "CENTER", art.parent, "CENTER", side * db.gap * k, y)
 	end
-	pcall(art.calm.SetAlpha, art.calm, db.calm / 100)
+	pcall(art.calm.SetAlpha, art.calm, min(db.calm / 100 * (CALM_BOOST[art.key] or 1), 1))
 	pcall(art.strike.SetAlpha, art.strike, db.alpha / 100)
 	-- The seconds left: the range's font, outlined, in a lighter shade of the colour; the circle's a
 	-- little smaller, inside it

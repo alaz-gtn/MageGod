@@ -1415,7 +1415,7 @@ art = ff.dressed
 check(ff.container is not None and watched(ff.container) == [400669, 400670], "Fingers of Frost: both its buffs")
 files = files_of(art)
 check(files.count(MEDIA + "frost_glow") == 4 and files.count(MEDIA + "frost_core") == 4, f"a snowflake by each hand: {files}")
-check(xs_of(art) == [-66, 66], f"closer in than the embers: {xs_of(art)}")
+check(xs_of(art) == [-102, 102], f"closer in than the embers: {xs_of(art)}")
 check(len(ff.container.button.shownAnims) == 3 and len(ff.container.button.assignedAnims) == 3, "turning, and flying in as it comes")
 
 # Another number for the same buff, seen out of combat, joins the list
@@ -1467,7 +1467,10 @@ psize.scripts.OnValueChanged(psize, 100)
 check(db.procs.size == 100 and pst("clearcasting").holder.scale == 1 and pst("clearcasting").spot.scale == 1, "their size")
 pgap = pcontrols[L.OPT_PROCS_GAP]
 pgap.scripts.OnValueChanged(pgap, 200)
-check(xs_of(pst("fingers").dressed) == [-110, 110], f"the space between the sides moves the snowflakes too: {xs_of(pst('fingers').dressed)}")
+check(xs_of(pst("fingers").dressed) == [-170, 170], f"the space between the sides moves the snowflakes too: {xs_of(pst('fingers').dressed)}")
+check(abs(pst("fingers").dressed.calm.alpha - min(db.procs.calm * 2, 100) / 100) < 1e-6
+      and abs(pst("clearcasting").dressed.calm.alpha - db.procs.calm / 100) < 1e-6,
+      f"the snowflakes, small, twice as strong while it lasts as the others: {pst('fingers').dressed.calm.alpha}")
 px = pcontrols[L.OPT_PROCS_X]
 px.scripts.OnValueChanged(px, 50)
 check(list(db.positions.procs.values()) == ["CENTER", "CENTER", 50, -20], f"left or right: {list(db.positions.procs.values())}")

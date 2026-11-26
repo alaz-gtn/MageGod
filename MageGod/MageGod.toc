@@ -4,7 +4,7 @@
 ## Notes-esES: Mejoras para magos: avisos de armadura, Intelecto Arcano, gema de maná y bufo de comida, rayos morados con el proc de Proyectiles Arcanos, aviso cuando vuelve Traslación, distancia al objetivo y aviso de agro. /magegod
 ## Notes-esMX: Mejoras para magos: avisos de armadura, Intelecto Arcano, gema de maná y bufo de comida, rayos morados con el proc de Proyectiles Arcanos, aviso cuando vuelve Traslación, distancia al objetivo y aviso de agro. /magegod
 ## Author: wowforeverplus
-## Version: 1.2.3
+## Version: 1.2.4
 ## Category: Class
 ## SavedVariables: MageGodDB
 ## SavedVariablesPerCharacter: MageGodCharDB

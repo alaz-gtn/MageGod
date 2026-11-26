@@ -1,3 +1,7 @@
+# 1.2.4
+
+- **Fingers of Frost**: the snowflakes sit further out to your sides, clear of your character, and show more while the proc lasts (twice the strength you set for the others, being small).
+
 # 1.2.3
 
 - **Counterspell ready no longer shows for casts that can't be cut.** In a fight Forever hides from addons whether a cast can be interrupted; the icon now lets the game itself show or hide it, and follows a cast that turns cuttable or uncuttable halfway.
