@@ -1,3 +1,7 @@
+# 1.2.1
+
+- **Group buffs**: warriors and rogues no longer count as missing your Arcane Intellect; they have no mana, so it does nothing for them.
+
 # 1.2.0
 
 - **More proc animations**, each only with its talent, small and see-through like the lightning: **Clearcasting** (Arcane Concentration) a circle of arcane light at your feet, **Heating Up** (Fire) embers rising on both sides of you, and **Fingers of Frost** (Frost) a snowflake turning by each hand. A burst as each procs, then calmer while it lasts, with its seconds. They work in combat. Colour, size, place and strength in the Procs tab; `/magegod procs` shows them.
