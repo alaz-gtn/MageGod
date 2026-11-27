@@ -18,7 +18,7 @@ local defaults = {
 	-- Herbalism or Mining: Find Herbs or Find Minerals on, out in the world (last: the one you had on)
 	gather = { enabled = true },
 	-- Runes for teleports and portals, Arcane Powder, Light Feathers running low (not with Reagent Economy)
-	reagents = { enabled = true, buy = false },
+	reagents = { enabled = true, buy = false, map = true },
 	-- In a group, Arcane Intellect missing on someone: a click casts it on them
 	groupBuffs = { enabled = true },
 	-- Gear under this % and bags with this many free slots or fewer

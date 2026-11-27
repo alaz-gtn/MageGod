@@ -590,6 +590,7 @@ local function Build()
 		function() return db.reagents.enabled end, function(v) db.reagents.enabled = v ns.RefreshReagents() Buffs() end,
 		ns.ItemIcon(17031))
 	y = Check(page, y, ns.REAGENT_TEXT.OPT_BUY, function() return db.reagents.buy end, function(v) db.reagents.buy = v end)
+	y = Check(page, y, ns.REAGENT_MAP_TEXT.OPT_MAP, function() return db.reagents.map end, function(v) db.reagents.map = v ns.RefreshReagentMap() end)
 	y = Section(page, y, L.SEC_GATHER)
 	y = Check(page, y, format(L.OPT_GATHER, SpellName(2383) or "Find Herbs", SpellName(2580) or "Find Minerals"),
 		function() return db.gather.enabled end, function(v) db.gather.enabled = v Buffs() end,

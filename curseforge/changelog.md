@@ -1,3 +1,7 @@
+# 1.4.0
+
+- **Reagent vendors on the world map**: the vendors who sell the reagents of the spells you know (runes, Arcane Powder, Light Feathers), only your faction's, each pin with the reagent's icon. Hover one for what it has of yours and how many you carry; click it for a waypoint (TomTom's if you have it). None with Reagent Economy. An option in the reagents section turns it off. Data from QuestieDB. If you update with the game open, restart it: the addon brings a new Libs folder.
+
 # 1.3.2
 
 - **Reagents running low, a little earlier**: Runes of Teleportation and of Portals and Light Feathers now remind you with 5 or fewer left (before, under 3 runes and under 5 feathers).
