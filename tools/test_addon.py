@@ -1748,6 +1748,41 @@ check(len(gb) == 1 and gb[0].count == 4 and gb[0].unit == "party1" and gb[0].tex
       f"four party members without it: how many, and the first to cast it on: {[(r.count, r.unit) for r in gb]}")
 check((1459, True, "4") in icons(), f"its icon in the row with the count: {icons()}")
 check(("spell", "Arcane Intellect", "party1") in casters(), f"a click casts it on that member: {casters()}")
+# Only who you can buff now: in another city, or out of range, they don't count
+lua.execute('''
+local inRange = C_Spell.IsSpellInRange
+C_Spell.IsSpellInRange = function(spell, unit)
+  if G.far and type(unit) == "string" and G.far[unit] then return false end
+  return inRange(spell, unit)
+end
+UnitIsVisible = function(unit) return not (G.away and G.away[unit]) end
+''')
+S.away = lua.table(party1=True, party2=True)
+G.Fire("UNIT_AURA", "party1")
+gb = list(ns.GroupBuffReminders().values())
+check(len(gb) == 1 and gb[0].count == 2 and gb[0].unit == "party3",
+      f"two of them far away (another city): only the two near count: {[(r.count, r.unit) for r in gb]}")
+S.away = lua.table(party1=True, party2=True, party3=True, party4=True)
+G.Fire("UNIT_AURA", "party1")
+check(len(list(ns.GroupBuffReminders())) == 0 and (1459, True, "4") not in icons(), "all of them far away: no reminder")
+S.away = None
+S.far = lua.table(party3=True)
+sweep = ns.GroupBuffSweeper
+check(sweep.shown, "in a group: it looks again every couple of seconds")
+sweep.scripts.OnUpdate(sweep, 1)
+check((1459, True, "4") not in icons(), "not yet")
+sweep.scripts.OnUpdate(sweep, 1.1)
+gb = list(ns.GroupBuffReminders().values())
+check(len(gb) == 1 and gb[0].count == 3 and (1459, True, "3") in icons(),
+      f"they walk back, one still out of range: three, without an event: {[(r.count, r.unit) for r in gb]}")
+S.far = None
+G.Fire("UNIT_AURA", "party1")
+S.combat = True
+G.Fire("PLAYER_REGEN_DISABLED")
+check(not sweep.shown and len(list(ns.GroupBuffReminders())) == 0, "in a fight: nothing, and no looking")
+S.combat = False
+G.Fire("PLAYER_REGEN_ENABLED")
+check(sweep.shown, "after the fight it looks again")
 S.unitClasses = lua.table(party1="WARRIOR", party2="ROGUE")
 G.Fire("UNIT_AURA", "party1")
 gb = list(ns.GroupBuffReminders().values())
@@ -1762,6 +1797,7 @@ S.group = False
 G.Fire("GROUP_ROSTER_UPDATE")
 auras(Mage_Armor=(1800, 1800), Arcane_Intellect=(3600, 3600), Well_Fed=(800, 900))
 check(len(list(ns.GroupBuffReminders())) == 0, "alone: nothing")
+check(not ns.GroupBuffSweeper.shown, "alone: no looking")
 
 def repair_rows():
     return [r[0] for r in extras() if "%" in r[0] or r[0].startswith(RPT.BAGS.split(":")[0]) or r[0] == RPT.BAGS_FULL]

@@ -1,3 +1,7 @@
+# 1.3.1
+
+- **Group buffs (Arcane Intellect) only for who you can buff now**: a party member in another city, out of sight or out of range no longer counts, so being grouped with someone far away doesn't nag you. It looks again every couple of seconds while you're in a group (out of combat), so the reminder comes as soon as they walk up.
+
 # 1.3.0
 
 - **Repair at a merchant** (an option, off by default): talking to a merchant who repairs fixes everything you wear and carry with your money, and says in the chat what it cost; without enough money it says so. Only this class's addon does it, so with every ...God addon on you pay once.
