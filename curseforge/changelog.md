@@ -1,3 +1,7 @@
+# 1.3.2
+
+- **Reagents running low, a little earlier**: Runes of Teleportation and of Portals and Light Feathers now remind you with 5 or fewer left (before, under 3 runes and under 5 feathers).
+
 # 1.3.1
 
 - **Group buffs (Arcane Intellect) only for who you can buff now**: a party member in another city, out of sight or out of range no longer counts, so being grouped with someone far away doesn't nag you. It looks again every couple of seconds while you're in a group (out of combat), so the reminder comes as soon as they walk up.

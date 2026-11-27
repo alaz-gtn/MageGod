@@ -1663,7 +1663,10 @@ check(rrow.item == 17031 and rrow.clickText == RT.FOR % "Teleport: Stormwind, Te
       f"its tooltip says what spends them: {rrow.clickText}")
 S["items"][17031] = 5
 G.Fire("BAG_UPDATE_DELAYED")
-check(reagent_rows() == [], "five: enough")
+check(reagent_rows() == [(RT.LOW % ("gem 17031", 5), None, None)], f"five left: still a reminder (5 or fewer): {reagent_rows()}")
+S["items"][17031] = 6
+G.Fire("BAG_UPDATE_DELAYED")
+check(reagent_rows() == [], "six: enough")
 S["items"][17031] = 1
 know(10059)
 check(len(reagent_rows()) == 2, "Portal known too: its runes as well")
