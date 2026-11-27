@@ -190,8 +190,12 @@ local function CheckOne(t)
 	local stale = s.blind and now - s.blind > 1
 	s.blind = nil
 	if cooling then
+		local own = not s.own and Own(info, s.spell)
+		if own then s.own = true end
+		-- Only the global cooldown, as the game says: its time doesn't count. Buffs cast one after
+		-- another chain them for longer than any one, and that isn't the spell's own coming back
+		if own == false and not s.own then s.since = now end
 		if not s.since then s.since = now end
-		if not s.own and Own(info, s.spell) then s.own = true end
 	elseif s.since then
 		if not stale and (s.own or now - s.since > GCD_MAX) and db.enabled and db.spells[t.key] ~= false
 			and ns.IsMage() and not UnitIsDeadOrGhost("player") then

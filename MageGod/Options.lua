@@ -583,10 +583,13 @@ local function Build()
 		function(v) db.repair.low = v ns.RefreshRepair() Buffs() end)
 	y = Slider(page, y, L.OPT_REPAIR_BAGS, 0, 10, 1, function() return db.repair.bags end,
 		function(v) db.repair.bags = v ns.RefreshRepair() Buffs() end)
+	y = Check(page, y, ns.REPAIR_TEXT.OPT_AUTO, function() return db.repair.auto end, function(v) db.repair.auto = v end,
+		"Interface\\Icons\\INV_Misc_Coin_02")
 	y = Section(page, y, L.SEC_REAGENTS)
 	y = Check(page, y, format(L.OPT_REAGENTS, SpellName(1225503) or "Reagent Economy"),
 		function() return db.reagents.enabled end, function(v) db.reagents.enabled = v ns.RefreshReagents() Buffs() end,
 		ns.ItemIcon(17031))
+	y = Check(page, y, ns.REAGENT_TEXT.OPT_BUY, function() return db.reagents.buy end, function(v) db.reagents.buy = v end)
 	y = Section(page, y, L.SEC_GATHER)
 	y = Check(page, y, format(L.OPT_GATHER, SpellName(2383) or "Find Herbs", SpellName(2580) or "Find Minerals"),
 		function() return db.gather.enabled end, function(v) db.gather.enabled = v Buffs() end,
