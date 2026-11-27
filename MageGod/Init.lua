@@ -23,6 +23,7 @@ local defaults = {
 	groupBuffs = { enabled = true },
 	-- Gear under this % and bags with this many free slots or fewer
 	repair = { enabled = true, low = 25, bags = 2, auto = false },
+	groupNeeds = { enabled = true, anywhere = false, blessing = "wisdom" },
 	food = { enabled = true },
 	-- Forever's mage scrolls that last an hour: a weapon imbue and a familiar
 	scrolls = { imbue = true, familiar = true, decipher = true },
