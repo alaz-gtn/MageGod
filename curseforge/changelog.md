@@ -1,3 +1,7 @@
+# 1.5.2
+
+- **No false pulses after a silence** (or a stun, or a school lockout): while it lasts the game shows every spell cooling down, and when it ended Blink, Ice Block and Evocation pulsed as if back. Now that time doesn't count; a spell that was really cooling down still pulses when it's back.
+
 # 1.5.1
 
 - **No more false "back" pulses for Ice Block and Evocation** in combat: casting instant spells one after another kept the global cooldown running non-stop, and since the game hides cooldown times in a fight, that looked like those spells cooling down. Now the global cooldown is checked on its own and its time doesn't count.

@@ -159,6 +159,8 @@ C_Spell.GetSpellCooldownDuration = function(id)
   local cd = COOLDOWNS[id]
   return { IsZero = function() if cd and cd.secretZero then return SECRET end return not (cd and cd.isActive and not cd.gcd) end }
 end
+G.LOC = 0
+C_LossOfControl = { GetActiveLossOfControlDataCount = function() return G.LOC end }
 C_NamePlate = { GetNamePlateForUnit = function() return G.plate end }
 UnitExists = function(u) if u == "target" then return G.target ~= nil end return true end
 UnitCanAttack = function() return G.target and G.target.hostile end
@@ -1616,6 +1618,42 @@ poll()
 check(pulse_place.shown, "in combat, Blink back after 15 s, even under other global cooldowns: pulse")
 pulse_frame(2)
 G.COOLDOWNS[61304] = None
+# A mob silences you: every spell shows cooling down for 4 s, and none of them was
+S.LOC = 1
+for _ in range(20):
+    hidden_gcd()
+    S.now = S.now + 0.2
+    poll()
+S.LOC = 0
+cooldown(isActive=False, duration=G.SECRET, startTime=G.SECRET, isOnGCD=G.SECRET)
+poll()
+check(not pulse_place.shown, "a silence ending: no pulse")
+S.LOC = 1
+cooldown(isActive=True, duration=4, startTime=S.now, isOnGCD=False)
+G.Fire("SPELL_UPDATE_COOLDOWN")
+for _ in range(20):
+    S.now = S.now + 0.2
+    poll()
+S.LOC = 0  # the game says it's over a moment before the spells
+S.now = S.now + 0.2
+poll()
+cooldown(isActive=False, duration=0, startTime=0, isOnGCD=False)
+S.now = S.now + 0.1
+poll()
+check(not pulse_place.shown, "a silence ending, its time showing: no pulse")
+# Blink already cooling down when the silence comes: it still pulses when it's back
+G.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 1953)
+cooldown(isActive=True, duration=15, startTime=S.now, isOnGCD=False)
+G.Fire("SPELL_UPDATE_COOLDOWN")
+S.LOC = 1
+S.now = S.now + 4
+poll()
+S.LOC = 0
+S.now = S.now + 11
+cooldown(isActive=False, duration=0, startTime=0, isOnGCD=False)
+poll()
+check(pulse_place.shown, "cooling down before a silence: its pulse still comes")
+pulse_frame(2)
 # The game won't say for a while: when it does, it's old news
 G.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 1953)
 cooldown(isActive=True, duration=G.SECRET)

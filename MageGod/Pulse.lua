@@ -77,6 +77,19 @@ local function GlobalRunning()
 	return active and true or false
 end
 
+-- Silenced, stunned, or your school locked out: the game shows every spell cooling down until it
+-- ends, and that says nothing about their own cooldowns. nil when the game won't say
+local function Locked(spell)
+	if C_Spell.GetSpellLossOfControlCooldown then
+		local _, duration = C_Spell.GetSpellLossOfControlCooldown(spell)
+		if type(duration) == "number" and not ns.IsSecret(duration) and duration > 0 then return true end
+	end
+	if C_LossOfControl and C_LossOfControl.GetActiveLossOfControlDataCount then
+		local count = C_LossOfControl.GetActiveLossOfControlDataCount()
+		if type(count) == "number" and not ns.IsSecret(count) then return count > 0 end
+	end
+end
+
 -- Is that its own cooldown and not the global one? nil when the game won't say
 local function Own(info, spell)
 	local duration = info.duration
@@ -208,15 +221,21 @@ local function CheckOne(t)
 	-- After a stretch where the game wouldn't say, what it says now may be old news
 	local stale = s.blind and now - s.blind > 1
 	s.blind = nil
-	if cooling then
+	-- Half a second more: the game may say the silence is over a moment before the spells
+	if cooling and not s.real and Locked(s.spell) then s.lockedAt = now end
+	if cooling and not s.real and s.lockedAt and now - s.lockedAt < 0.5 then
+		-- What it shows now may be the silence's: its wait starts again when that is over
+		s.own, s.since = false, now
+	elseif cooling then
 		local own = not s.own and Own(info, s.spell)
-		if own then s.own = true end
+		if own then s.own, s.real = true, true end
 		-- Only the global cooldown, as the game says: its time doesn't count. Spells cast one after
 		-- another chain them for longer than any one, and that isn't the spell's own coming back.
 		-- In combat it may not say whose it is: while the global one runs, the wait doesn't start
 		local global = not s.own and own == nil and GlobalRunning()
 		if s.own then
 			s.since = s.since or now
+			s.real = true
 		elseif own == false or global and not s.real then
 			s.since = now -- the global one, or maybe: its wait starts afresh
 		else
@@ -228,9 +247,9 @@ local function CheckOne(t)
 			and ns.IsMage() and not UnitIsDeadOrGhost("player") then
 			Pulse(s.spell)
 		end
-		s.since, s.own, s.real = nil, false, nil
+		s.since, s.own, s.real, s.lockedAt = nil, false, nil, nil
 	elseif s.own and s.castAt and now - s.castAt > 1 then
-		s.own = false -- the cast never showed a cooldown
+		s.own, s.real = false, nil -- the cast never showed a cooldown
 	end
 end
 
