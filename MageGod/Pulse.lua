@@ -28,7 +28,7 @@ local STAR = "Interface\\Cooldown\\star4"
 local db
 local place, art
 -- Each tracked spell's state: spell (the one you know), since (first seen cooling down), own (known
--- to be its own cooldown, not the global one), castAt (when you last cast it), blind (since when
+-- to be its own cooldown, not the global one), real (seen cooling down with the global one over), castAt (when you last cast it), blind (since when
 -- the game won't say whether it is cooling down)
 local states = {}
 for _, t in ipairs(TRACKED) do states[t.key] = { own = false } end
@@ -62,6 +62,21 @@ local function Cooling(spell)
 	return active and true or false, info
 end
 
+-- Is the global cooldown running? nil when the game won't say. While it runs, any spell shows as
+-- cooling down: that alone says nothing about its own cooldown
+local GCD_SPELL = 61304
+local function GlobalRunning()
+	local info = C_Spell.GetSpellCooldown(GCD_SPELL)
+	if type(info) ~= "table" or ns.IsSecret(info) then return nil end
+	local active = info.isActive
+	if active == nil or ns.IsSecret(active) then
+		local duration = info.duration
+		if duration == nil or ns.IsSecret(duration) then return nil end
+		active = duration > 0
+	end
+	return active and true or false
+end
+
 -- Is that its own cooldown and not the global one? nil when the game won't say
 local function Own(info, spell)
 	local duration = info.duration
@@ -71,7 +86,11 @@ local function Own(info, spell)
 	if C_Spell.GetSpellCooldownDuration then
 		local timer = C_Spell.GetSpellCooldownDuration(spell, true)
 		local zero = timer and timer.IsZero and timer:IsZero()
-		if zero ~= nil and not ns.IsSecret(zero) then return not zero end
+		-- While the global one runs this may count it too: it can't tell then
+		if zero ~= nil and not ns.IsSecret(zero) then
+			if not zero and GlobalRunning() ~= false then return nil end
+			return not zero
+		end
 	end
 end
 
@@ -192,16 +211,24 @@ local function CheckOne(t)
 	if cooling then
 		local own = not s.own and Own(info, s.spell)
 		if own then s.own = true end
-		-- Only the global cooldown, as the game says: its time doesn't count. Buffs cast one after
-		-- another chain them for longer than any one, and that isn't the spell's own coming back
-		if own == false and not s.own then s.since = now end
-		if not s.since then s.since = now end
+		-- Only the global cooldown, as the game says: its time doesn't count. Spells cast one after
+		-- another chain them for longer than any one, and that isn't the spell's own coming back.
+		-- In combat it may not say whose it is: while the global one runs, the wait doesn't start
+		local global = not s.own and own == nil and GlobalRunning()
+		if s.own then
+			s.since = s.since or now
+		elseif own == false or global and not s.real then
+			s.since = now -- the global one, or maybe: its wait starts afresh
+		else
+			s.since = s.since or now
+			if global == false then s.real = true end -- the global one is over and it still cools down
+		end
 	elseif s.since then
 		if not stale and (s.own or now - s.since > GCD_MAX) and db.enabled and db.spells[t.key] ~= false
 			and ns.IsMage() and not UnitIsDeadOrGhost("player") then
 			Pulse(s.spell)
 		end
-		s.since, s.own = nil, false
+		s.since, s.own, s.real = nil, false, nil
 	elseif s.own and s.castAt and now - s.castAt > 1 then
 		s.own = false -- the cast never showed a cooldown
 	end

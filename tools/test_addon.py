@@ -1577,6 +1577,45 @@ S.now = S.now + 1.4
 cooldown(isActive=False, duration=G.SECRET, startTime=G.SECRET, isOnGCD=G.SECRET, secretZero=True)
 poll()
 check(not pulse_place.shown, "a hidden global cooldown: no pulse")
+# In combat, instant spells one after another: the global cooldown never stops, and the game
+# won't say whose cooldown it is (its timer may even count the global one)
+def gcd(active):
+    G.COOLDOWNS[61304] = lua.table(isActive=active, duration=G.SECRET, startTime=G.SECRET)
+
+
+def hidden_gcd():
+    cooldown(isActive=True, duration=G.SECRET, startTime=G.SECRET, isOnGCD=G.SECRET)
+
+
+for _ in range(5):
+    gcd(True)
+    hidden_gcd()
+    G.Fire("SPELL_UPDATE_COOLDOWN")
+    for _ in range(7):
+        S.now = S.now + 0.2
+        poll()
+gcd(False)
+cooldown(isActive=False, duration=G.SECRET, startTime=G.SECRET, isOnGCD=G.SECRET)
+poll()
+check(not pulse_place.shown, "in combat, five global cooldowns in a row: no pulse")
+# Blink cast in a fight, unseen: once the global cooldown is over it still cools down, so it's its own
+G.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", G.SECRET)
+gcd(True)
+hidden_gcd()
+G.Fire("SPELL_UPDATE_COOLDOWN")
+S.now = S.now + 1.5
+gcd(False)
+poll()
+for _ in range(9):
+    gcd(_ % 2 == 0)
+    S.now = S.now + 1.5
+    poll()
+cooldown(isActive=False, duration=G.SECRET, startTime=G.SECRET, isOnGCD=G.SECRET)
+gcd(True)
+poll()
+check(pulse_place.shown, "in combat, Blink back after 15 s, even under other global cooldowns: pulse")
+pulse_frame(2)
+G.COOLDOWNS[61304] = None
 # The game won't say for a while: when it does, it's old news
 G.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 1953)
 cooldown(isActive=True, duration=G.SECRET)
