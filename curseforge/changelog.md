@@ -1,3 +1,7 @@
+# 1.5.3
+
+- **No more Lua errors in a group** ("Auras cannot be accessed when secret"): when a party member was fighting and you weren't, the game hides their buffs, and asking for them is an error in Forever. Now the addon checks first and leaves that member out until the fight is over.
+
 # 1.5.2
 
 - **No false pulses after a silence** (or a stun, or a school lockout): while it lasts the game shows every spell cooling down, and when it ended Blink, Ice Block and Evocation pulsed as if back. Now that time doesn't count; a spell that was really cooling down still pulses when it's back.

@@ -1870,6 +1870,27 @@ check(len(gb) == 1 and gb[0].count == 2 and gb[0].unit == "party3",
       f"warriors and rogues have no mana: not counted for it: {[(r.count, r.unit) for r in gb]}")
 S.unitClasses = None
 G.Fire("UNIT_AURA", "party1")
+# Their buffs hidden while they fight (you don't): Forever answers with an error, not a secret
+lua.execute('''
+local getAura, fighting = C_UnitAuras.GetAuraDataByIndex, UnitAffectingCombat
+C_UnitAuras.GetAuraDataByIndex = function(unit, i, f)
+  if G.sealed and type(unit) == "string" and G.sealed[unit] then
+    error("Auras cannot be accessed when secret while tainted by 'MageGod'")
+  end
+  return getAura(unit, i, f)
+end
+UnitAffectingCombat = function(unit)
+  if G.inFight and type(unit) == "string" and G.inFight[unit] then return true end
+  return fighting(unit)
+end
+''')
+S.sealed = lua.table(party1=True)
+S.inFight = lua.table(party2=True)
+G.Fire("UNIT_AURA", "party1")
+gb = list(ns.GroupBuffReminders().values())
+check(len(gb) == 1 and gb[0].count == 2 and gb[0].unit == "party3",
+      f"one with his buffs sealed off, one fighting: no error, neither counted: {[(r.count, r.unit) for r in gb]}")
+S.sealed, S.inFight = None, None
 auras(Mage_Armor=(1800, 1800), Arcane_Brilliance=(3600, 3600), Well_Fed=(800, 900))
 G.Fire("UNIT_AURA", "party1")
 check(ns.GroupBuffReminders() == [] or len(list(ns.GroupBuffReminders())) == 0, "Arcane Brilliance counts too")
