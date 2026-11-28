@@ -90,6 +90,13 @@ local function Locked(spell)
 	end
 end
 
+-- Shooting your wand: every shot shows your spells cooling down for a moment, one after another,
+-- and that isn't theirs. Until a little after the last shot
+local shooting, shotUntil = false, 0
+local function Shooting(now)
+	return shooting or now < shotUntil
+end
+
 -- Is that its own cooldown and not the global one? nil when the game won't say
 local function Own(info, spell)
 	local duration = info.duration
@@ -222,7 +229,7 @@ local function CheckOne(t)
 	local stale = s.blind and now - s.blind > 1
 	s.blind = nil
 	-- Half a second more: the game may say the silence is over a moment before the spells
-	if cooling and not s.real and Locked(s.spell) then s.lockedAt = now end
+	if cooling and not s.real and (Shooting(now) or Locked(s.spell)) then s.lockedAt = now end
 	if cooling and not s.real and s.lockedAt and now - s.lockedAt < 0.5 then
 		-- What it shows now may be the silence's: its wait starts again when that is over
 		s.own, s.since = false, now
@@ -320,6 +327,8 @@ events:SetScript("OnEvent", function(self, event, unit, _, spellID)
 		ResolveAll()
 		self:RegisterEvent("SPELL_UPDATE_COOLDOWN")
 		self:RegisterEvent("SPELLS_CHANGED")
+		pcall(self.RegisterEvent, self, "START_AUTOREPEAT_SPELL") -- an event the game doesn't have would stop the file
+		pcall(self.RegisterEvent, self, "STOP_AUTOREPEAT_SPELL")
 		self:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
 		ns.StylePulse()
 		Watch()
@@ -336,6 +345,12 @@ events:SetScript("OnEvent", function(self, event, unit, _, spellID)
 				s.own, s.castAt = true, GetTime()
 			end
 		end
+		Watch()
+	elseif event == "START_AUTOREPEAT_SPELL" then
+		shooting = true
+		Watch()
+	elseif event == "STOP_AUTOREPEAT_SPELL" then
+		shooting, shotUntil = false, GetTime() + 2.5 -- the last shot's wait
 		Watch()
 	elseif event == "SPELL_UPDATE_COOLDOWN" then
 		Watch()

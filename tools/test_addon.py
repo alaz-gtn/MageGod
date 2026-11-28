@@ -1654,6 +1654,23 @@ cooldown(isActive=False, duration=0, startTime=0, isOnGCD=False)
 poll()
 check(pulse_place.shown, "cooling down before a silence: its pulse still comes")
 pulse_frame(2)
+# Shooting the wand: each shot shows the spells cooling down, its time hidden, the global one not running
+G.Fire("START_AUTOREPEAT_SPELL")
+for _ in range(10):
+    cooldown(isActive=True, duration=G.SECRET, startTime=G.SECRET, isOnGCD=G.SECRET)
+    G.Fire("SPELL_UPDATE_COOLDOWN")
+    for _ in range(8):
+        S.now = S.now + 0.2
+        poll()
+check(not pulse_place.shown, "shooting the wand: no pulse while it shoots")
+G.Fire("STOP_AUTOREPEAT_SPELL")
+for _ in range(8):
+    S.now = S.now + 0.2
+    poll()
+cooldown(isActive=False, duration=G.SECRET, startTime=G.SECRET, isOnGCD=G.SECRET)
+poll()
+check(not pulse_place.shown, "the wand stopped, its last shot over: no pulse")
+S.now = S.now + 3
 # The game won't say for a while: when it does, it's old news
 G.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 1953)
 cooldown(isActive=True, duration=G.SECRET)

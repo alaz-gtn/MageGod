@@ -1,3 +1,7 @@
+# 1.5.4
+
+- **No false pulses after shooting your wand**: every wand shot shows your spells cooling down for a moment, and in a fight the game hides whose it is, so when you stopped shooting Blink, Ice Block and Evocation pulsed as if back. Now the time spent shooting doesn't count. A spell cast in a fight that comes back while you're still shooting may not pulse.
+
 # 1.5.3
 
 - **No more Lua errors in a group** ("Auras cannot be accessed when secret"): when a party member was fighting and you weren't, the game hides their buffs, and asking for them is an error in Forever. Now the addon checks first and leaves that member out until the fight is over.
